@@ -1,15 +1,67 @@
 :root {
     --main-blue: cadetblue;
-}
-h1 {
-    font-family: 'Montserrat Alternates', sans-serif;
-    font-size: 3em;
-    color: var(--main-blue);
-}
-p {
+    --theme-burgundy: rgba(137, 54, 96, 1);
+    --theme-orange: rgba(239, 114, 96, 1);
+    --theme-green: rgba(103, 214, 147, 1);
+    --theme-light-blue: rgba(160, 214, 226, 1);
+    --theme-dark-blue: rgba(40, 156, 168, 1);
+    --theme-light-grey: #ccc;
+
+    --background-color: var(--theme-light-blue);
+
+    box-sizing: border-box;
     font-family: 'Lato', sans-serif;
+
 }
 
-trix-toolbar [data-trix-button-group="file-tools"] {
-     display: none;
+body {
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: white;
+}
+
+main {
+    display: grid;
+    grid-template-columns: 33% 1fr;
+}
+
+.sidebar {
+    background-color: white;
+}
+.cards {
+    padding: 1em;
+}
+
+header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: 1em;
+    margin: 1em;
+}
+header .logo-container {
+    height: 3em;
+    display: inline-block;
+}
+
+header .logo-container img {
+    height: 100%;
+    display: inline;
+}
+header h1 {
+    display: inline-block;
+    font-family: 'Montserrat Alternates', sans-serif;
+    font-size: 3em;
+    color: var(--theme-dark-blue);
+    margin: 0;
+}
+p {
+}
+
+/* INPUTS */
+input, textarea {
+    border: 1px solid var(--theme-light-grey);
 }
