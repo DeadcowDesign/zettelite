@@ -1,1 +1,2 @@
-Application/notes/*.**
+cache/*.json
+cache/*.csv

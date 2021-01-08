@@ -1,0 +1,15 @@
+:root {
+    --main-blue: cadetblue;
+}
+h1 {
+    font-family: 'Montserrat Alternates', sans-serif;
+    font-size: 3em;
+    color: var(--main-blue);
+}
+p {
+    font-family: 'Lato', sans-serif;
+}
+
+trix-toolbar [data-trix-button-group="file-tools"] {
+     display: none;
+}
