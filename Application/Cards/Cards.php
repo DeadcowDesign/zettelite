@@ -5,6 +5,7 @@ namespace Application\Cards;
 class Cards 
 {
     protected $Card;
+    protected $Drawers;
 
     /**
      * Create a card - this expects a well-formed JSON string containing our
@@ -13,6 +14,7 @@ class Cards
      */
     public function __construct() {
         $this->Card = null;
+        $this->Drawers = new \Application\Cards\Drawers();
     }
 
     public function setCard($cardJSON = '') {
@@ -26,14 +28,15 @@ class Cards
         if (!$this->Card) { return false; }
         if (!is_object($this->Card)) { return false; }
 
-        if (!isset($this->Card->id)) {
+        if (empty($this->Card->id)) {
             $this->Card->id = date("YmdHis");
         }
 
         if (
-            !isset($this->Card->content) ||
-            !isset($this->Card->title) ||
-            !isset($this->Card->drawer)
+            empty($this->Card->content) ||
+            empty($this->Card->title) ||
+            empty($this->Card->drawer) ||
+            empty($this->Card->id)
             ) {
                 return false;
         } 
@@ -54,21 +57,10 @@ class Cards
      * Save our card to the file system
      */
     public function saveCard() {
-        $isNewcard = true;
 
         if ($this->verifyCard() === true) {
-            if (\file_exists(CARD_FOLDER . DIRECTORY_SEPARATOR . $this->Card->id . '.json')) {
-                $isNewcard = false;
-            }
-
-            $cardFileHandle = fopen(CARD_FOLDER . DIRECTORY_SEPARATOR . $this->Card->id . '.json', 'w');
-            fwrite($cardFileHandle, json_encode($this->Card));
-            fclose($cardFileHandle);
-
-            if ($isNewcard) {
-                $drawer = new \Application\Cards\Drawers();
-                $drawer->addToDrawer($this->Card);
-            }
+    
+            $this->Drawers->addToDrawer($this->Card);
         }
 
         return $this->Card->id;

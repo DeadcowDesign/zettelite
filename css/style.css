@@ -23,23 +23,25 @@ header {
     background-color: white;
 }
 
+/**
+MAIN PAGE STRUCTURE
+*/
 main {
     display: grid;
     grid-template-columns: 33% 1fr;
 }
 
-.sidebar {
+.drawers {
     background-color: white;
 }
-.cards {
+.desk {
     padding: 1em;
 }
 
 header {
     display: grid;
     grid-template-columns: auto 1fr;
-    align-items: center;
-    column-gap: 1em;
+    align-items: baseline;
     margin: 1em;
 }
 header .logo-container {
@@ -58,6 +60,9 @@ header h1 {
     color: var(--theme-dark-blue);
     margin: 0;
 }
+
+header h1:first-letter {
+    font-size: 0;
 p {
 }
 
