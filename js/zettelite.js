@@ -1,55 +1,21 @@
 /**
  * Initialise Quill editor
- */
+ *
 var quill = new Quill('#editor', {
     theme: 'snow'
 });
-
+*/
 var cardData = {};
 /**
  * Insert a link to a card into another card
  * TODO - finish this off.
- */
+ *
 let insertLink = document.querySelector('#insertLink');
 insertLink.addEventListener('click', e => {
     e.preventDefault();
 
-    var delta = {
-        ops: [
-            {retain: quill.getSelection(true).index},
-            {insert: "[[Learn more from this resource]]", attributes: {link: "http://wikipedia.org"}}
-        ]
-    };
 
-    quill.updateContents(delta);
-})
-
-/**
- * Form functions
- */
-let cardForm = document.querySelector("#newNote");
-
-cardForm.addEventListener('submit', e => {
-    e.preventDefault();
-    let content = quill.root.innerHTML;
-    let title = document.getElementById("title").value;
-    let drawer = document.getElementById("drawer").value;
-    var formData = new FormData();
-    formData.append('content', content);
-    formData.append('title', title);
-    formData.append('drawer', drawer);
-
-    var xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function()
-    {
-        if(xmlHttp.readyState == 4 && xmlHttp.status == 200)
-        {
-            alert(xmlHttp.responseText);
-        }
-    }
-    xmlHttp.open("post", "/zettelite/api/addNote"); 
-    xmlHttp.send(formData); 
-});
+})*/
 
 /**
  * Load the drawers
@@ -61,7 +27,7 @@ function getDrawers() {
         if(xmlHttp.readyState == 4 && xmlHttp.status == 200)
         {
             cardData.drawers = JSON.parse(xmlHttp.responseText);
-            let drawersNode = document.querySelector(".drawers");
+            let drawersNode = document.querySelector(".drawers-container");
 
             for (let drawer of cardData.drawers) {
 
@@ -89,7 +55,10 @@ function getDrawers() {
     xmlHttp.send();
 }
 
-
+/**
+ * 
+ * @param {HTML Node} cardContainer get cards for a given HTML drawer
+ */
 function getCards(cardContainer) {
     let drawer = cardContainer.getAttribute('data-drawer');
     cardContainer.innerHTML = '';
@@ -102,7 +71,7 @@ function getCards(cardContainer) {
             for(let card of cards) {
                 if (card[0]) {
                 cardNode = document.createElement('div');
-                let cardText = document.createTextNode('[['+card[0]+']]'+ ' ' + card[1]);
+                let cardText = document.createTextNode(card[1]);
                 cardNode.appendChild(cardText);
                 cardNode.addEventListener('click', e => {
                     getCard(drawer, card[0]);
@@ -117,42 +86,136 @@ function getCards(cardContainer) {
     xmlHttp.send();
 }
 
+/**
+ * 
+ * @param {string} drawer The name of the drawer to retrieve the card from
+ * @param {string} id The ID of the card to retrieve from the drawer
+ */
 function getCard(drawer, id) {
-    let xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function()
-    {
-        if(xmlHttp.readyState == 4 && xmlHttp.status == 200)
+
+    if (document.getElementById(id) == null) {
+        let xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function()
         {
-            let card = JSON.parse(xmlHttp.responseText);
+            if(xmlHttp.readyState == 4 && xmlHttp.status == 200)
+            {
+                let card = JSON.parse(xmlHttp.responseText);
+                createCard(card);
 
-            let cardContainer = document.querySelector(".card-container");
-            let cardElement = document.createElement('div');
-            cardElement.classList.add('card');
-            cardElement.setAttribute('id', card.id);
-            let cardHeader = document.createElement('div');
-            cardHeader.innerText = '[[' + card.id + ']] ' + card.title;
-            cardElement.appendChild(cardHeader);
-            let cardContent = document.createElement('div');
-            cardContent.innerHTML = card.content;
-            cardElement.appendChild(cardContent);
-            cardContainer.appendChild(cardElement);
+            }
+        }
+        xmlHttp.open("GET", "/zettelite/cache/" + drawer + '/' + id + '.json' + "?v=" + Date.now() );
+        xmlHttp.send();
+    }
+}
 
-            cardElement.addEventListener('click', e => {
+/**
+ * createCard - create the HTML and interactions for a card
+ * @param {card} card 
+ */
+function createCard(card) {
+    let cardContainer = document.querySelector(".card-container");
+    let cardElement = document.createElement('div');
+    cardElement.classList.add('card');
+    cardElement.setAttribute('id', card.id);
+    
+    let cardHeader = document.createElement('div');
+    cardHeader.classList.add('card-header');
+    cardHeaderTitle = document.createElement('div');
+    cardHeaderTitle.innerHTML = card.title + '&nbsp;<small>[[' + card.id + ']]</small>';
+    cardHeaderTitle.classList.add('card-header-title');
+    cardHeaderButtons = document.createElement('div');
+    cardHeaderButtons.classList.add("card-header-buttons")
 
-                setQuillContent(card);
-            })
+    let editButton = document.createElement('div');
+    editButton.classList.add('card-button','card-edit-button');
+    let editButtonText = document.createTextNode("Edit");
+    editButton.appendChild(editButtonText);
+    editButton.addEventListener('click', e => {
+        quill = new Quill('#q'+card.id, {
+            theme: 'snow'
+        });        
+    });
+    cardHeaderButtons.appendChild(editButton);
 
+    let saveButton = document.createElement('div');
+    saveButton.classList.add('card-button','card-save-button');
+    let saveButtonText = document.createTextNode("Save");
+    saveButton.appendChild(saveButtonText);
+    cardHeaderButtons.appendChild(saveButton);
+
+    let cancelButton = document.createElement('div');
+    cancelButton.classList.add('card-button','card-cancel-button');
+    let cancelButtonText = document.createTextNode("Cancel");
+    cancelButton.appendChild(cancelButtonText);
+    cardHeaderButtons.appendChild(cancelButton);
+
+    cardHeader.appendChild(cardHeaderTitle);
+    cardHeader.appendChild(cardHeaderButtons);
+    cardElement.appendChild(cardHeader);
+
+    let cardContent = document.createElement('div');
+    cardContent.classList.add('card-content');
+    cardContent.setAttribute('id', 'q'+card.id);
+    cardContent.innerHTML = card.content;
+    cardElement.appendChild(cardContent);
+    cardContainer.appendChild(cardElement);
+}
+
+
+/**
+ * insertLink - insert a link to another card into a quill instance.
+ */
+function insertLink(id, title, drawer, quillInstance) {
+    var delta = {
+        ops: [
+            {retain: quill.getSelection(true).index},
+            {insert: title + ": [[" + id + "]]", attributes: {link: "http://wikipedia.org", "data-id": id, "data-drawer": drawer, "class": "card-link"}}
+        ]
+    };
+
+    quillInstance.updateContents(delta);
+}
+
+/**
+ * Add event listener to the backup button
+ */
+document.querySelector('#backup').addEventListener('click', e => {
+    e.preventDefault();
+    saveBlob();
+})
+
+/**
+ * saveBlob - use the API to download and save the notes backup file.
+ */
+function saveBlob() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/zettelite/api/backup', true);
+    xhr.responseType = 'blob';
+    xhr.onload = function(e) {
+        if (this.status == 200) {
+            // Create a new Blob object using the 
+            //response data of the onload object
+            var blob = new Blob([this.response], {type: 'octet/stream'});
+            //Create a link element, hide it, direct 
+            //it towards the blob, and then 'click' it programatically
+            let a = document.createElement("a");
+            a.style = "display: none";
+            document.body.appendChild(a);
+            //Create a DOMString representing the blob 
+            //and point the link element towards it
+            let url = window.URL.createObjectURL(blob);
+            a.href = url;
+            a.download = 'backup.zip';
+            //programatically click the link to trigger the download
+            a.click();
+            //release the reference to the file by revoking the Object URL
+            window.URL.revokeObjectURL(url);
         }
     }
-    xmlHttp.open("GET", "/zettelite/cache/" + drawer + '/' + id + '.json');
-    xmlHttp.send();
+    xhr.send();
 }
 
-function setFormContent(card) {
-    let quillContainer = document.querySelector('.ql-editor');
-    quillContainer.innerHTML = card.content;
-    let titleField = 
-}
 (function(){
     getDrawers();
 })()

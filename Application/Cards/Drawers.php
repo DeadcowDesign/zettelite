@@ -82,24 +82,65 @@ class Drawers
     public function addToDrawer($card) {
         var_dump($card);
 
-        if (!isset($card->id) || $card->id == '') {
-            echo('No ID?');
-            return false;
-        }
         $targetDrawer = CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer;
 
         if (!\is_dir($targetDrawer)) {
             $this->makeDrawer($card->drawer);
         }
 
+        // If our file exists it should alredy be in the directory so we can skip
+        if (!\file_exists(CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer . DIRECTORY_SEPARATOR . $card->id . '.json')) {
+            $listing = \fopen($targetDrawer . DIRECTORY_SEPARATOR . "index.csv", "a");
+            \fputcsv($listing, [$card->id, $card->title]);
+            \fclose($listing);
+        }
         $cardFileHandle = fopen(CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer . DIRECTORY_SEPARATOR . $card->id . '.json', 'w');
         fwrite($cardFileHandle, json_encode($card));
         fclose($cardFileHandle);
 
-        $listing = \fopen($targetDrawer . DIRECTORY_SEPARATOR . "index.csv", "a");
-        \fputcsv($listing, [$card->id, $card->title]);
-        \fclose($listing);
-
         return true;
+    }
+
+    /**
+     * Create a .zip archive of all the notes in our cache folder and spit it out
+     */
+    public function createBackup() {
+        // Get real path for our folder
+        $rootPath = \realpath(CARD_FOLDER);
+        $zipPath = 'backup.zip';
+        // Initialize archive object
+        $zip = new \ZipArchive();
+        $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+
+        // Create recursive directory iterator
+        /** @var SplFileInfo[] $files */
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($rootPath),
+            \RecursiveIteratorIterator::LEAVES_ONLY
+        );
+
+        foreach ($files as $name => $file)
+        {
+            // Skip directories (they would be added automatically)
+            if (!$file->isDir())
+            {
+                // Get real and relative path for current file
+                $filePath = $file->getRealPath();
+                $relativePath = substr($filePath, strlen($rootPath) + 1);
+
+                // Add current file to archive
+                if (\preg_match('/(\.csv|\.json)/', $filePath)) {
+                    $zip->addFile($filePath, $relativePath);
+                }
+            }
+        }
+
+        // Zip archive will be created only after closing object
+        $zip->close();
+
+        header('Content-Type: application/zip');
+        header("Content-Disposition: attachment; filename='". $zipPath . "'");
+        header('Content-Length: ' . filesize($zipPath));
+        header("Location: /zettelite/backup.zip");
     }
 }

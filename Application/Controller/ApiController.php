@@ -60,4 +60,10 @@ class ApiController extends Controller {
         $drawer = new \Application\Cards\Drawers();
         $drawer->makeDrawer($data['drawer']);
     }
+
+    public function backupAction($data) {
+
+        $drawer = new \Application\Cards\Drawers();
+        $drawer->createBackup();
+    }
 }
