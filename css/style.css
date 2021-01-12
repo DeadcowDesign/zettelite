@@ -1,6 +1,7 @@
 :root {
     --main-blue: cadetblue;
     --theme-burgundy: rgba(137, 54, 96, 1);
+    --theme-red: rgba(214, 102, 102, 1);
     --theme-orange: rgba(239, 114, 96, 1);
     --theme-green: rgba(103, 214, 147, 1);
     --theme-light-blue: rgba(160, 214, 226, 1);
@@ -13,9 +14,11 @@
     --background-color: var(--theme-light-blue);
     --disabled-text: var(--theme-mid-grey);
     --positive-action-color: var(--theme-green);
-    --negative-action-color: var(--theme-burgundy);
+    --negative-action-color: var(--theme-red);
     --footer-background: var(--theme-black);
     --footer-text-color: var(--theme-white);
+
+    --theme-border: 1px solid var(--theme-dark-blue);
 
     box-sizing: border-box;
 
@@ -33,21 +36,38 @@ body {
     grid-template-rows: auto 1fr auto;
 }
 
-header {
-    background-color: var(--theme-white);
+
+.button {
+    display: inline-block;
+    cursor: pointer;
+    color: var(--theme-white);
+    background: var(--theme-dark-blue);
+    padding: 1em;
+}
+
+.button.positive-button {
+    background: var(--positive-action-color);
+}
+
+.button.negative-button {
+    background-color: var(--negative-action-color);
+}
+
+.subtle {
+    color: var(--theme-dark-grey);
+    font-weight: 300;
+    font-style: italic;
 }
 
 /**
 MAIN PAGE STRUCTURE
 */
-main {
+.zettelite {
     display: grid;
     grid-template-columns: auto 1fr;
+    grid-template-rows: min-content 1fr;
 }
 
-.drawers {
-    background-color: var(--theme-white);
-}
 .drawers-heading {
     padding: 0.5em 1em;
     background-color: var(--theme-dark-blue);
@@ -56,11 +76,57 @@ main {
     color: var(--theme-white);
 }
 
-.drawers-container {
+.drawers-column {
     border-right: 3px solid var(--theme-dark-blue);
 }
+
+.add-drawer-button {
+    background-color: var(--positive-action-color);
+    color: white;
+    text-align: center;
+    padding: 1em;
+    cursor: pointer;
+}
+
 .drawer {
-    padding: 0.5em 1em;
+    position: relative;
+    padding: 0;
+    padding-top: 0.5em;
+    margin: 0.25em;
+    margin-bottom: 0.25em;
+    cursor: pointer;
+    border: 1px solid #ccc;
+
+}
+
+.drawer-title {
+    position: relative;
+    padding: 0.5em;
+    margin: 0.1em;
+}
+
+.drawer:after {
+    position: absolute;
+    background-color: white;
+    content: "";
+    width: 20%;
+    height: 0.5em;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 1px solid #ccc;
+    top: -1px;
+    border-top: 1px solid white;
+    border-radius: 0 0 25% 25%;
+    
+    
+  }
+.drawer-card {
+    border-top: 1px solid var(--theme-light-grey);
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 -1px 5px -2px rgba(0,0,0,0.3);
+    padding: 0.5em 0.5em;
+    margin: 0;
+    cursor: pointer;
 }
 
 .desk-heading {
@@ -77,15 +143,16 @@ main {
     column-gap: 1em;
     row-gap: 0.75em;
     padding: 0.75em 1em;
+    grid-template-rows: min-content;
 }
 .card {
-    border: 1px solid var(--theme-dark-blue);
+    border: var(--theme-border)
 }
 
 .card-header {
     display: grid;
     grid-template-columns: auto 1fr;
-    border-bottom: 1px solid var(--theme-dark-blue);
+    border-bottom: var(--theme-border)
 }
 
 .card-header-buttons {
@@ -96,27 +163,50 @@ main {
     align-self: center;
     padding: 1em;
 }
-.card-button {
-    display: inline-block;
-    cursor: pointer;
-    color: var(--theme-white);
-    background: var(--theme-dark-blue);
-    padding: 1em;
-}
 
-.card-edit-button {
-    background: var(--theme-dark-blue);
-}
 .card-save-button {
     background-color: var(--positive-action-color);
+    display: none;
 }
 .card-cancel-button {
-    background-color: var(--negative-action-color);
+    
+    display: none;
 }
 .card-content {
     padding: 1em;
 }
+.card-status-bar {
+    border-top: var(--theme-border);
+    border-bottom: var(--theme-border);
+    display: grid;
+    column-gap: 1em;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+}
+.card-links {
+    padding: 0.5em 0;
+    margin: 0 1em;
+}
 
+.card-links a {
+    display: inline-block;
+    align-self: start;
+    padding: 0.5em;
+    margin: 0.25em;
+    text-decoration: none;
+}
+
+.edit-mode .card-edit-button {
+    display: none;
+}
+
+.edit-mode .card-save-button {
+    display: inline-block;
+}
+.edit-mode .card-cancel-button {
+    display: inline-block;
+}
+ /* HEADER */
 header {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -135,6 +225,7 @@ header .logo-container img {
 header h1 {
     display: inline-block;
     font-family: 'Montserrat Alternates', sans-serif;
+    font-weight: 300;
     font-size: 3em;
     color: var(--theme-dark-blue);
     margin: 0;
@@ -143,6 +234,30 @@ header h1 {
 header h1:first-letter {
     font-size: 0;
 }
+
+/* EDITING OVERLAY - Meh. Not sure about this...
+.overlay {
+    position: absolute;
+    left: -1000px;
+    top: -1000px;
+    width: 0px;
+    height: 0px;
+}
+
+.edit-mode .overlay {
+    position: absolute;
+    width: auto;
+    height: auto;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    background-color: rgba(0,0,0,0.7);
+    backdrop-filter: blur(40px);
+    z-index: 1;
+}
+*/
 
 /* INPUTS */
 input, textarea {
@@ -158,6 +273,14 @@ input, textarea {
 
 footer {
     display: grid;
+    padding: 1em;
     background-color: var(--footer-background);
+    border-top: 2px solid var(--theme-dark-blue);
     color: var(--footer-text-color);
+    grid-template-columns: repeat( auto-fit, minmax(250px, 1fr) );
+}
+
+footer a {
+    text-decoration: underline;
+    cursor: pointer;
 }

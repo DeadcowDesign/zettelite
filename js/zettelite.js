@@ -6,6 +6,8 @@ var quill = new Quill('#editor', {
 });
 */
 var cardData = {};
+var quill = null;
+var buffer = '';
 /**
  * Insert a link to a card into another card
  * TODO - finish this off.
@@ -21,6 +23,7 @@ insertLink.addEventListener('click', e => {
  * Load the drawers
  */
 function getDrawers() {
+
     let xmlHttp = new XMLHttpRequest();
     xmlHttp.onreadystatechange = function()
     {
@@ -28,6 +31,7 @@ function getDrawers() {
         {
             cardData.drawers = JSON.parse(xmlHttp.responseText);
             let drawersNode = document.querySelector(".drawers-container");
+            drawersNode.innerHTML = "";
 
             for (let drawer of cardData.drawers) {
 
@@ -35,12 +39,14 @@ function getDrawers() {
                 drawerNode.setAttribute('data-drawer', drawer);
                 drawerNode.classList.add('drawer');
                 let drawerHeader = document.createElement("h2");
+                drawerHeader.classList.add("drawer-title");
                 drawerText = document.createTextNode(drawer);
                 let cardContainer = document.createElement("div");
                 cardContainer.setAttribute("data-drawer", drawer);
 
                 drawerHeader.addEventListener('click', e => {
                     e.preventDefault();
+                    drawerNode.classList.add('open');
                     getCards(cardContainer);
                 });
                 
@@ -71,6 +77,7 @@ function getCards(cardContainer) {
             for(let card of cards) {
                 if (card[0]) {
                 cardNode = document.createElement('div');
+                cardNode.classList.add("drawer-card");
                 let cardText = document.createTextNode(card[1]);
                 cardNode.appendChild(cardText);
                 cardNode.addEventListener('click', e => {
@@ -118,11 +125,11 @@ function createCard(card) {
     let cardElement = document.createElement('div');
     cardElement.classList.add('card');
     cardElement.setAttribute('id', card.id);
-    
+    cardElement.setAttribute('drawer', card.drawer);
     let cardHeader = document.createElement('div');
     cardHeader.classList.add('card-header');
     cardHeaderTitle = document.createElement('div');
-    cardHeaderTitle.innerHTML = card.title + '&nbsp;<small>[[' + card.id + ']]</small>';
+    cardHeaderTitle.innerHTML = card.title;
     cardHeaderTitle.classList.add('card-header-title');
     cardHeaderButtons = document.createElement('div');
     cardHeaderButtons.classList.add("card-header-buttons")
@@ -132,21 +139,37 @@ function createCard(card) {
     let editButtonText = document.createTextNode("Edit");
     editButton.appendChild(editButtonText);
     editButton.addEventListener('click', e => {
-        quill = new Quill('#q'+card.id, {
-            theme: 'snow'
-        });        
+        if (!quill) {
+            quill = new Quill('#q'+card.id, {
+                theme: 'snow'
+            });
+        }
+
+        buffer = quill.root.innerHTML;
+
+        document.body.classList.toggle('edit-mode');
     });
+
     cardHeaderButtons.appendChild(editButton);
 
     let saveButton = document.createElement('div');
     saveButton.classList.add('card-button','card-save-button');
     let saveButtonText = document.createTextNode("Save");
     saveButton.appendChild(saveButtonText);
-    cardHeaderButtons.appendChild(saveButton);
+    saveButton.addEventListener('click', e => {
+        e.preventDefault();
+        saveCard(card);
+    });
 
+    cardHeaderButtons.appendChild(saveButton);
+ 
     let cancelButton = document.createElement('div');
     cancelButton.classList.add('card-button','card-cancel-button');
     let cancelButtonText = document.createTextNode("Cancel");
+    cancelButton.addEventListener('click', e => {
+        e.preventDefault();
+        removeQuill(card.id);
+    })
     cancelButton.appendChild(cancelButtonText);
     cardHeaderButtons.appendChild(cancelButton);
 
@@ -162,7 +185,49 @@ function createCard(card) {
     cardContainer.appendChild(cardElement);
 }
 
+function saveCard(card) {
+    var data = new FormData();
+    data.append('id', card.id);
+    data.append('title', card.title);
+    data.append('drawer', card.drawer);
+    data.append('content', quill.root.innerHTML);
 
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/zettelite/api/addNote/', true);
+    xhr.onload = function () {
+        if (this.status == 200) {
+            buffer = quill.root.innerHTML;
+            removeQuill(card.id);
+        }
+    };
+    xhr.send(data);
+}
+/**
+ * removeQuill - given a card Id strip Quill from the card
+ * @param {string} cardId 
+ */
+function removeQuill(cardId) {
+    let card = document.getElementById(cardId);
+
+    if (!quill) {
+        return false;
+    }
+
+    quill.enable(false);
+    if (buffer == '') {
+        buffer = quill.root.innerHTML;
+    }
+
+    card.querySelector('.ql-toolbar').remove();
+    let contentElem = card.querySelector('.card-content');
+    contentElem.classList.remove("ql-container", "ql-snow", "ql-disabled");
+    contentElem.innerHTML = buffer;
+
+    quill = null;
+    document.body.classList.toggle("edit-mode");
+
+    return true;
+}
 /**
  * insertLink - insert a link to another card into a quill instance.
  */
