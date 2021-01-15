@@ -21,7 +21,8 @@ class AboutController extends Controller {
      * page of the website.
      */
     public function indexAction($data = null) {
+        $this->render('/head.html');
+        $this->render('/header.html');
         $this->render();    // Render will output an html file located at Templates/Home/index.html
-    }
-
+        $this->render('/footer.html');    }
 }

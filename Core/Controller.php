@@ -28,7 +28,11 @@ class Controller
         $this->init();
     }
 
-    protected function render() {
-        readfile(BASE_PATH . '/' . APPLICATION_NAME . '/Templates/' . $this->className . '/' . $this->methodName . '.html');
+    protected function render($path = "") {
+        if (!$path) {
+            $path = $this->className . '/' . $this->methodName . '.html';
+        }
+
+        readfile(BASE_PATH . '/' . APPLICATION_NAME . '/Templates/' . $path);
     }
 }

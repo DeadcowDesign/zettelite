@@ -36,13 +36,18 @@ body {
     grid-template-rows: auto 1fr auto;
 }
 
+input {
+    font-size: 1em;
+}
 
 .button {
     display: inline-block;
     cursor: pointer;
     color: var(--theme-white);
     background: var(--theme-dark-blue);
+    border: none;
     padding: 1em;
+    font-size: 1em;
 }
 
 .button.positive-button {
@@ -81,19 +86,34 @@ MAIN PAGE STRUCTURE
 }
 
 .add-drawer-button {
+    position: relative;
     background-color: var(--positive-action-color);
+    display: block;
     color: white;
     text-align: center;
     padding: 1em;
     cursor: pointer;
+    margin: 1em;
 }
+
+.add-drawer-button:after {
+    position: absolute;
+    background-color: white;
+    content: "";
+    width: 20%;
+    height: 0.5em;
+    left: 50%;
+    transform: translateX(-50%);
+    top: -1px;
+    border-top: 1px solid white;
+    border-radius: 0 0 25% 25%;
+  }
 
 .drawer {
     position: relative;
     padding: 0;
     padding-top: 0.5em;
-    margin: 0.25em;
-    margin-bottom: 0.25em;
+    margin: 1em;
     cursor: pointer;
     border: 1px solid #ccc;
 
@@ -121,12 +141,40 @@ MAIN PAGE STRUCTURE
     
   }
 .drawer-card {
+    background: var(--theme-white);
     border-top: 1px solid var(--theme-light-grey);
     border-radius: 10px 10px 0 0;
-    box-shadow: 0 -1px 5px -2px rgba(0,0,0,0.3);
-    padding: 0.5em 0.5em;
+    box-shadow: 0 -3px 5px -2px rgba(0,0,0,0.3);
+    padding: 1em;
     margin: 0;
     cursor: pointer;
+}
+
+.drawer-card:hover {
+
+    position: relative;
+    top: -10px;
+}
+
+.drawer-container {
+    display: none;
+}
+
+.drawer-container .button {
+    display: block;
+    width: 100%;
+    border-top: 1px solid var(--theme-light-grey);
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 -3px 5px -2px rgba(0,0,0,0.3);
+    padding: 1em;
+    padding-bottom: calc(1em + 10px);
+    margin: 0;
+    cursor: pointer;
+    margin-bottom: -10px;
+}
+
+.drawer.open > .drawer-container {
+    display: block;
 }
 
 .desk-heading {
@@ -146,7 +194,9 @@ MAIN PAGE STRUCTURE
     grid-template-rows: min-content;
 }
 .card {
-    border: var(--theme-border)
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    border: var(--theme-border);
 }
 
 .card-header {
@@ -164,18 +214,16 @@ MAIN PAGE STRUCTURE
     padding: 1em;
 }
 
-.card-save-button {
-    background-color: var(--positive-action-color);
-    display: none;
+.card-header a.subtle {
+    cursor: pointer;
+    text-decoration: underline;
 }
-.card-cancel-button {
-    
-    display: none;
-}
+
 .card-content {
     padding: 1em;
 }
 .card-status-bar {
+    align-self: end;
     border-top: var(--theme-border);
     border-bottom: var(--theme-border);
     display: grid;
@@ -196,16 +244,6 @@ MAIN PAGE STRUCTURE
     text-decoration: none;
 }
 
-.edit-mode .card-edit-button {
-    display: none;
-}
-
-.edit-mode .card-save-button {
-    display: inline-block;
-}
-.edit-mode .card-cancel-button {
-    display: inline-block;
-}
  /* HEADER */
 header {
     display: grid;
@@ -235,6 +273,71 @@ header h1:first-letter {
     font-size: 0;
 }
 
+.modal {
+    position: absolute;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+    top: -1000px;
+    left: -1000px;
+}
+
+.modal.active {
+    display: grid;
+    background: white;
+    position: absolute;
+    height: auto;
+    max-height: 90%;
+    width: auto;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transform: translateX(-50%, 50%);
+    border: 3px solid var(--theme-dark-blue);
+    margin: auto;
+    padding: 2em;
+    box-shadow: 5px 5px 10px rgba(0,0,0,0.3);
+}
+
+.modal .modal-text-input {
+    border: none;
+    border-bottom: var(--theme-border);
+    outline: none;
+    font-weight: bold;
+}
+
+.modal-text-input.drawer {
+    font-size: 1.5em;
+}
+
+.modal-text-input.card-title {
+    font-weight: 700;
+}
+.modal-text-input.card-title:disabled + div {
+    display: inline;
+    cursor: not-allowed;
+}
+
+.modal-text-input.card-title + div {
+    display: none;
+}
+
+.modal.modal-folder .header {
+    font-size: 1.25em;
+    margin-bottom: 2em;
+}
+
+.modal.modal-folder .modal-content {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    column-gap: 0.5em;
+}
+
+.modal.modal-card .buttons {
+    display: grid;
+    justify-items: end;
+    grid-template-columns: 1fr auto auto;
+}
 /* EDITING OVERLAY - Meh. Not sure about this...
 .overlay {
     position: absolute;
@@ -259,9 +362,18 @@ header h1:first-letter {
 }
 */
 
-/* INPUTS */
-input, textarea {
-    border: 1px solid var(--theme-light-grey);
+.about h2 {
+    margin: 0;
+    padding: 0.5em 1em;
+    background-color: var(--theme-dark-blue);
+    border-right: 3px solid var(--theme-white);
+
+    color: var(--theme-white);
+}
+
+.about .content {
+    padding: 2em;
+    padding-top: 0;
 }
 
 .idField, .idField:focus {
@@ -280,6 +392,10 @@ footer {
     grid-template-columns: repeat( auto-fit, minmax(250px, 1fr) );
 }
 
+.footer-col {
+    display: grid;
+    align-items: end;
+}
 footer a {
     text-decoration: underline;
     cursor: pointer;

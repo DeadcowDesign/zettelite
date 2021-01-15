@@ -1,176 +1,405 @@
 /**
- * Initialise Quill editor
- *
-var quill = new Quill('#editor', {
+ * What this needs to be able to do:
+ * 
+ * Download a list of cards from a given drawer and store in a data structure
+ * for later reference (to build parent links for cards)
+ * 
+ * Create a card item.
+ * Card Item needs to have:
+ * Card title
+ * Parent Card title +  link
+ * Edit buttons.
+ */
+
+var quill = null;
+var cardIndex = {};
+var quillBuffer = '';   // This is what gets inserted into content when a card is updated
+var baseURL = '/zettelite';
+var cardCache = 'cache';
+var isEditing = false;
+var cardModal = document.getElementById("card-modal");
+var drawerModal = document.getElementById("drawer-modal");
+quill = new Quill('#quill', {
     theme: 'snow'
 });
-*/
-var cardData = {};
-var quill = null;
-var buffer = '';
+
+// SECTION Drawer/Index Functions
+
+// SECTION Drawer Functions
+
+// ANCHOR - getDrawerData
 /**
- * Insert a link to a card into another card
- * TODO - finish this off.
- *
-let insertLink = document.querySelector('#insertLink');
-insertLink.addEventListener('click', e => {
-    e.preventDefault();
-
-
-})*/
-
-/**
- * Load the drawers
+ * get a list of drawers from the zettelite.
+ * This will return an array. 
  */
-function getDrawers() {
-
+function getDrawerData(callback) {
+    let drawers = [];
     let xmlHttp = new XMLHttpRequest();
     xmlHttp.onreadystatechange = function()
     {
-        if(xmlHttp.readyState == 4 && xmlHttp.status == 200)
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
         {
-            cardData.drawers = JSON.parse(xmlHttp.responseText);
-            let drawersNode = document.querySelector(".drawers-container");
-            drawersNode.innerHTML = "";
+            drawers = JSON.parse(xmlHttp.responseText);
 
-            for (let drawer of cardData.drawers) {
+            // Create empty arrays for our drawer indeces
+            drawers.forEach( drawer => {
+                cardIndex[drawer] = [];
+            });
 
-                let drawerNode = document.createElement('div');
-                drawerNode.setAttribute('data-drawer', drawer);
-                drawerNode.classList.add('drawer');
-                let drawerHeader = document.createElement("h2");
-                drawerHeader.classList.add("drawer-title");
-                drawerText = document.createTextNode(drawer);
-                let cardContainer = document.createElement("div");
-                cardContainer.setAttribute("data-drawer", drawer);
-
-                drawerHeader.addEventListener('click', e => {
-                    e.preventDefault();
-                    drawerNode.classList.add('open');
-                    getCards(cardContainer);
-                });
-                
-                drawerHeader.appendChild(drawerText);
-                drawerNode.appendChild(drawerHeader);
-                drawerNode.appendChild(cardContainer);
-                drawersNode.appendChild(drawerNode);
-            }
+            callback();
         }
     }
-    xmlHttp.open("GET", "/zettelite/api/getdrawers");
+    
+    xmlHttp.open("GET", baseURL + "/api/getdrawers");
     xmlHttp.send();
 }
 
+// ANCHOR - buildDrawer
 /**
+ * create the HTML for a drawer. Just requires a string which is the name of the
+ * drawer.
  * 
- * @param {HTML Node} cardContainer get cards for a given HTML drawer
+ * @param {String} drawer The name of the drawer
  */
-function getCards(cardContainer) {
-    let drawer = cardContainer.getAttribute('data-drawer');
-    cardContainer.innerHTML = '';
-    let xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function()
-    {
-        if(xmlHttp.readyState == 4 && xmlHttp.status == 200)
-        {
-            let cards = JSON.parse(xmlHttp.responseText);
-            for(let card of cards) {
-                if (card[0]) {
-                cardNode = document.createElement('div');
-                cardNode.classList.add("drawer-card");
-                let cardText = document.createTextNode(card[1]);
-                cardNode.appendChild(cardText);
-                cardNode.addEventListener('click', e => {
-                    getCard(drawer, card[0]);
-                })
-                cardContainer.appendChild(cardNode);
-                }
-            }
+function buildDrawer(drawer) {
+    let drawerNode = document.createElement('div');
+    drawerNode.setAttribute('data-drawer', drawer);
+    drawerNode.classList.add('drawer');
+    let drawerHeader = document.createElement("h2");
+    drawerHeader.classList.add("drawer-title");
+    drawerText = document.createTextNode(drawer);
+    let cardContainer = document.createElement("div");
+    cardContainer.classList.add("drawer-container");
 
+    drawerHeader.addEventListener('click', e => {
+        e.preventDefault();
+        drawerNode.classList.toggle('open');
+        if (drawerNode.classList.contains('open')) {
+            getIndex(drawer, false, buildIndex);
         }
-    }
-    xmlHttp.open("GET", "/zettelite/api/getdrawer/drawer/" + drawer);
-    xmlHttp.send();
+    });
+    
+    drawerHeader.appendChild(drawerText);
+    drawerNode.appendChild(drawerHeader);
+    drawerNode.appendChild(cardContainer);
+
+    return drawerNode;
 }
 
+// ANCHOR - refreshDrawers
 /**
- * 
- * @param {string} drawer The name of the drawer to retrieve the card from
- * @param {string} id The ID of the card to retrieve from the drawer
+ * Reload the drawers
  */
-function getCard(drawer, id) {
+function refreshDrawers() {
+    getDrawerData(buildDrawers);
+}
 
-    if (document.getElementById(id) == null) {
+// ANCHOR - buildDrawers
+/**
+ * buildDrawers - given a list of drawer names, will build a set of HTML drawers
+ * with events for the drawers column.
+ * 
+ * @param {array} drawers An array of drawer names
+ */
+function buildDrawers() {
+
+    // First empty the drawers HTML so we can use this for both loading and
+    // reloading
+    let drawersNode = document.querySelector(".drawers-container");
+    drawersNode.innerHTML = "";
+
+    for(let drawer in cardIndex) {
+        drawersNode.appendChild(buildDrawer(drawer));
+    };
+}
+
+// ANCHOR - createNewDrawer
+/**
+ * Takes a drawer name and sends to the Zettelite, creating a new
+ * drawer to store cards in. Server-side, this creates a new folder and an empty
+ * index.csv file for cards
+ * 
+ * @param {String} title The name of the drawer to be created
+ * @param {function} callback A callback to run once the operation has completed
+ */
+function createNewDrawer(title, callback) {
+    var data = new FormData();
+    data.append('drawer', title);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/zettelite/api/makeDrawer/', true);
+    xhr.onload = function () {
+        if (this.status == 200) {
+            document.getElementById('new-folder').value = '';
+            callback();
+        }
+    };
+    xhr.send(data);
+}
+// !SECTION
+
+// SECTION Index functions
+// ANCHOR refreshIndex
+/**
+ * refreshIndex - when card information changes (specficially card title), update
+ * the drawer that contains the card to reflect the change.
+ * @param {string} drawerName The name of the drawer to refresh
+ */
+function refreshIndex(drawerName) {
+    let drawer = document.querySelector('[data-drawer="' + drawerName + '"]');
+    drawer.querySelector('.drawer-container').innerHTML = '';
+    getIndex(drawerName, true, () => {
+        buildIndex(drawerName);
+    });
+}
+
+// ANCHOR getIndex
+/**
+ * getIndex - get an index of cards from the API. If the targeted drawer already
+ * has cards in it, we dont get the cards again to save the server being hammered
+ * 
+ * @param {HTML element} drawer The drawer container
+ * @param {boolean} forceUpdate Whether to ignore that there are cards already in the drawer
+ */
+function getIndex(drawerName, forceUpdate, callback) {
+
+    forceUpdate = forceUpdate || false;
+
+    if (!drawerName) {
+        return false;
+    }
+
+    let drawer = document.querySelector('[data-drawer="' + drawerName + '"]');
+
+    let hasCards = !!drawer.querySelectorAll('.drawer-container > .drawer-card').length;
+
+    if ( (!hasCards) || (forceUpdate == true) ) {
+
         let xmlHttp = new XMLHttpRequest();
+
         xmlHttp.onreadystatechange = function()
         {
-            if(xmlHttp.readyState == 4 && xmlHttp.status == 200)
-            {
-                let card = JSON.parse(xmlHttp.responseText);
-                createCard(card);
+            if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
 
+                let cards = JSON.parse(xmlHttp.responseText)
+
+                // Create empty arrays for our drawer indeces
+                cards.forEach( card => {
+
+                    cardIndex[drawerName][card[0]] = {"id": card[0], "title": card[1]};
+                });
+
+                callback(drawerName);
             }
         }
-        xmlHttp.open("GET", "/zettelite/cache/" + drawer + '/' + id + '.json' + "?v=" + Date.now() );
+        
+        xmlHttp.open("GET", baseURL + "/api/getdrawer/drawer/" + drawerName);
         xmlHttp.send();
     }
+
+    return cardIndex;
 }
 
+// ANCHOR buildIndex
 /**
- * createCard - create the HTML and interactions for a card
- * @param {card} card 
+ * buildIndex - build the HTML that contains the list of cards
+ * 
+ * @param {array} cards An array of cards
+ * @param {HTML Node} cardContainer The div that will contain cards
  */
-function createCard(card) {
+function buildIndex(drawerName) {
+    let drawer = document.querySelector('[data-drawer="' + drawerName + '"]');
+
+    let cards = cardIndex[drawerName];
+
+    let container = drawer.querySelector(".drawer-container");
+
+    let newButtonNode = document.createElement("button");
+    newButtonNode.classList.add("button", 'positive-button');
+    newButtonNode.setAttribute('data-drawer', drawerName);
+    newButtonNode.innerText = "Add new Card";
+    newButtonNode.addEventListener('click', e => {
+        e.preventDefault();
+        cardModal.classList.add("active");
+        document.getElementById("card-drawer-input").value = drawerName;
+    });
+
+    container.appendChild(newButtonNode);
+
+    for(let card in cards) {
+        let data = cards[card];
+        let cardNode = document.createElement('div');
+        cardNode.classList.add("drawer-card");
+        let cardText = document.createTextNode(data.title);
+        cardNode.appendChild(cardText);
+        cardNode.addEventListener('click', e => {
+            getCard(drawerName, data.id, buildCard);
+        })
+
+        container.appendChild(cardNode);
+    }
+}
+// !SECTION
+
+// !SECTION
+
+// SECTION Card functions
+
+// ANCHOR - clearCardEditor
+/**
+ * clearCardEditor - empty all the inputs for the card editor. Reset the contents
+ * of the Quill Editor
+ */
+function clearCardEditor() {
+    let cardEditor = document.getElementById("card-modal");
+    let inputs = cardEditor.querySelectorAll('input');
+
+    for (input of inputs) {
+        input.value = '';
+    }
+
+    quill.root.innerHTML = '';
+
+    return true;
+}
+
+// ANCHOR - saveCard
+/**
+ * saveCard - get card Data from the card modal, transform it into POST data and
+ * send it to the Zettelite
+ * 
+ * @param {function} callback Function to run after a successful return from the server
+ */
+function saveCard(callback) {
+    let id      = document.getElementById('card-id-input').value,
+        title   = document.getElementById('card-title-input').value,
+        parent  = document.getElementById('card-parent-input').value,
+        drawer = document.getElementById('card-drawer-input').value;
+
+    let formData = new FormData();
+    formData.append('id', id);
+    formData.append('title', title);
+    formData.append('parent', parent);
+    formData.append('drawer', drawer);
+    formData.append('content', quill.root.innerHTML);
+
+    let xhr = new XMLHttpRequest();
+    xhr.open('POST', '/zettelite/api/addNote/', true);
+    xhr.onload = function () {
+        if (this.status == 200) {
+            console.log(xhr.responseText);
+            callback();
+            clearCardEditor();
+            getCard(drawer, id, (cardData) => {
+                console.log(cardData);
+                buildCard(cardData, true);
+            });
+        }
+    };
+    xhr.send(formData);
+
+}
+
+// ANCHOR getCard
+/**
+ * getCard - get card data from the zettelite. Cards are flat json files stored
+ * in 
+ * @param {string} drawerName The name of the drawer the card resides in
+ * @param {string} cardId The id of the card
+ */
+function getCard(drawerName, cardId, callback) {
+
+    let xmlHttp = new XMLHttpRequest();
+
+    xmlHttp.onreadystatechange = function()
+    {
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+
+            let cardData = JSON.parse(xmlHttp.responseText);
+            callback(cardData);
+        }
+    }
+    
+    xmlHttp.open("GET", [baseURL, cardCache, drawerName, cardId + '.json'].join('/') + '?v=' + Date.now());
+    xmlHttp.send();
+}
+
+// ANCHOR buildCard
+/**
+ * buildCard - build the HTML for a card and attach it to the desk from a given
+ * card object.
+ * @param {object} cardData A card data object
+ */
+function buildCard(cardData, force) {
+    force = force || false;
+
+    let cardElement = null;
+
+    if (!force && !!document.querySelector(`[data-card-id="${cardData.id}"]`)) {
+        return false;
+    }
+
+    if (document.querySelector(`[data-card-id="${cardData.id}"]`)) {
+        document.querySelector(`[data-card-id="${cardData.id}"]`).innerHTML = '';
+        cardElement = document.querySelector(`[data-card-id="${cardData.id}"]`);
+    } else {
+        cardElement = document.createElement('div');
+        cardElement.classList.add('card');
+        cardElement.setAttribute('data-card-id', cardData.id);
+        cardElement.setAttribute('drawer', cardData.drawer);
+    }
+
     let cardContainer = document.querySelector(".card-container");
-    let cardElement = document.createElement('div');
-    cardElement.classList.add('card');
-    cardElement.setAttribute('id', card.id);
-    cardElement.setAttribute('drawer', card.drawer);
+ 
     let cardHeader = document.createElement('div');
     cardHeader.classList.add('card-header');
     cardHeaderTitle = document.createElement('div');
-    cardHeaderTitle.innerHTML = card.title;
+    if (cardData.parent) {
+        let cardParent = document.createElement("a");
+        if (cardIndex[cardData.drawer].hasOwnProperty(cardData.parent)) {
+            cardParent.setAttribute('data-id', cardIndex[cardData.drawer][cardData.parent].id);
+            cardParent.innerText = `${cardIndex[cardData.drawer][cardData.parent].title} > `;
+            cardParent.addEventListener('click', e => {
+                getCard(cardData.drawer, cardIndex[cardData.drawer][cardData.parent].id, (cardData) => {
+                    buildCard(cardData, false);
+                });
+            });
+        }
+        cardParent.classList.add("subtle");
+        
+        cardHeaderTitle.appendChild(cardParent);    
+    }
+    let cardHeaderTitleText = document.createElement('b');
+    cardHeaderTitleText.innerText = cardData.title;
+    cardHeaderTitle.appendChild(cardHeaderTitleText);
     cardHeaderTitle.classList.add('card-header-title');
     cardHeaderButtons = document.createElement('div');
     cardHeaderButtons.classList.add("card-header-buttons")
 
     let editButton = document.createElement('div');
-    editButton.classList.add('card-button','card-edit-button');
+    editButton.classList.add('button','card-edit-button', 'positive-button');
     let editButtonText = document.createTextNode("Edit");
     editButton.appendChild(editButtonText);
     editButton.addEventListener('click', e => {
-        if (!quill) {
-            quill = new Quill('#q'+card.id, {
-                theme: 'snow'
-            });
-        }
-
-        buffer = quill.root.innerHTML;
-
-        document.body.classList.toggle('edit-mode');
+        document.getElementById('card-id-input').value = cardData.id;
+        document.getElementById('card-parent-input').value = cardData.parent;
+        document.getElementById('card-drawer-input').value = cardData.drawer;
+        cardModal.classList.add("active");
+        document.getElementById("card-title-input").value = cardData.title;
+        quill.root.innerHTML = cardData.content;
+        buffer = cardData.content;
     });
 
     cardHeaderButtons.appendChild(editButton);
 
-    let saveButton = document.createElement('div');
-    saveButton.classList.add('card-button','card-save-button');
-    let saveButtonText = document.createTextNode("Save");
-    saveButton.appendChild(saveButtonText);
-    saveButton.addEventListener('click', e => {
-        e.preventDefault();
-        saveCard(card);
+    let cancelButton = document.createElement('div');
+    cancelButton.classList.add('button','card-cancel-button', 'negative-button');
+    let cancelButtonText = document.createTextNode("Close");
+    cancelButton.appendChild(cancelButtonText);
+    cancelButton.addEventListener('click', e => {
+        document.querySelector(`[data-card-id="${cardData.id}"]`).remove();
     });
 
-    cardHeaderButtons.appendChild(saveButton);
- 
-    let cancelButton = document.createElement('div');
-    cancelButton.classList.add('card-button','card-cancel-button');
-    let cancelButtonText = document.createTextNode("Cancel");
-    cancelButton.addEventListener('click', e => {
-        e.preventDefault();
-        removeQuill(card.id);
-    })
-    cancelButton.appendChild(cancelButtonText);
     cardHeaderButtons.appendChild(cancelButton);
 
     cardHeader.appendChild(cardHeaderTitle);
@@ -179,35 +408,40 @@ function createCard(card) {
 
     let cardContent = document.createElement('div');
     cardContent.classList.add('card-content');
-    cardContent.setAttribute('id', 'q'+card.id);
-    cardContent.innerHTML = card.content;
+    cardContent.setAttribute('id', 'q'+cardData.id);
+    cardContent.innerHTML = cardData.content;
     cardElement.appendChild(cardContent);
+
+    let cardStatus = document.createElement('div');
+    cardStatus.classList.add("card-status-bar");
+    let cardChildButton = document.createElement("button");
+    cardChildButton.classList.add("button", "positive-button");
+    cardChildButton.innerText = "Add child Card";
+    cardStatus.appendChild(cardChildButton);
+    cardStatus.addEventListener('click', e => {
+        e.preventDefault();
+        cardModal.classList.add("active");
+        document.getElementById("card-drawer-input").value = cardData.drawer;
+        document.getElementById('card-parent-input').value = cardData.id;
+    });
+    let cardDate = document.createElement('div');
+    cardDate.classList.add("subtle");
+    cardDate.innerText = `Created on: ${cardData.id.substring(0,4)}/${cardData.id.substring(4,6)}/${cardData.id.substring(6,8)} ${cardData.id.substring(8,10)}:${cardData.id.substring(10,12)}`;
+    cardStatus.appendChild(cardDate);
+    
+    cardElement.appendChild(cardStatus);
     cardContainer.appendChild(cardElement);
+
 }
 
-function saveCard(card) {
-    var data = new FormData();
-    data.append('id', card.id);
-    data.append('title', card.title);
-    data.append('drawer', card.drawer);
-    data.append('content', quill.root.innerHTML);
-
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/zettelite/api/addNote/', true);
-    xhr.onload = function () {
-        if (this.status == 200) {
-            buffer = quill.root.innerHTML;
-            removeQuill(card.id);
-        }
-    };
-    xhr.send(data);
-}
+// ANCHOR reloadCard
+// ANCHOR removeQuill
 /**
  * removeQuill - given a card Id strip Quill from the card
  * @param {string} cardId 
  */
 function removeQuill(cardId) {
-    let card = document.getElementById(cardId);
+    let card = document.querySelector(`[data-card-id="${cardId}"]`);
 
     if (!quill) {
         return false;
@@ -224,32 +458,16 @@ function removeQuill(cardId) {
     contentElem.innerHTML = buffer;
 
     quill = null;
-    document.body.classList.toggle("edit-mode");
-
+    card.classList.remove("edit-mode");
+    isEditing = false;
     return true;
 }
-/**
- * insertLink - insert a link to another card into a quill instance.
- */
-function insertLink(id, title, drawer, quillInstance) {
-    var delta = {
-        ops: [
-            {retain: quill.getSelection(true).index},
-            {insert: title + ": [[" + id + "]]", attributes: {link: "http://wikipedia.org", "data-id": id, "data-drawer": drawer, "class": "card-link"}}
-        ]
-    };
 
-    quillInstance.updateContents(delta);
-}
+// !SECTION
 
-/**
- * Add event listener to the backup button
- */
-document.querySelector('#backup').addEventListener('click', e => {
-    e.preventDefault();
-    saveBlob();
-})
+// SECTION - Backup cards
 
+// ANCHOR - saveBlob Function
 /**
  * saveBlob - use the API to download and save the notes backup file.
  */
@@ -280,7 +498,69 @@ function saveBlob() {
     }
     xhr.send();
 }
+// !SECTION
 
+// SECTION - Event Listeners
+
+// ANCHOR - Drawer Modal Events
+/* Event Listener for the "Add Drawer" button */
+document.getElementById("add-drawer-button").addEventListener('click', e => {
+    document.getElementById("folder-modal").classList.add("active");
+    document.getElementById("new-folder").focus();
+})
+
+/* Event Listener for the "Save Drawer" button */
+document.getElementById("folder-modal-save").addEventListener('click', e => {
+    e.preventDefault();
+    createNewDrawer(document.getElementById('new-folder').value, () => {
+        refreshDrawers();
+        document.getElementById("folder-modal").classList.remove("active");
+    });
+});
+
+/* Event Listener for the "Cancel" button for the folder modal */
+document.getElementById("folder-modal-cancel").addEventListener('click', e => {
+    e.preventDefault();
+    document.getElementById("folder-modal").classList.remove("active");
+    document.getElementById('new-folder').value = '';
+
+});
+
+// ANCHOR - Card Event Listeners
+
+/* Event Listener for the Card edit Cancel button */
+document.getElementById("card-modal-cancel").addEventListener('click', e => {
+    e.preventDefault();
+    document.getElementById("card-modal").classList.remove("active");
+    clearCardEditor();
+
+});
+
+/* Event Listener for the Card edit Save button */
+document.getElementById("card-modal-save").addEventListener('click', e => {
+    e.preventDefault();
+
+    saveCard(() => {
+        let drawer = document.getElementById('card-drawer-input').value;
+        document.getElementById("card-modal").classList.remove("active");
+        refreshIndex(drawer);
+    });
+
+});
+
+// ANCHOR - Backup Cards Events
+
+/* Add event listener for the backup cards footer link */
+document.querySelector('#backup').addEventListener('click', e => {
+    e.preventDefault();
+    saveBlob();
+});
+
+// !SECTION
+
+/*******************************************************************************
+ * LET'S GOOOOO!
+ ******************************************************************************/
 (function(){
-    getDrawers();
+    getDrawerData(buildDrawers);
 })()

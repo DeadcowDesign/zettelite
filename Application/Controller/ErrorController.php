@@ -16,7 +16,7 @@ namespace Application\Controller;
 class ErrorController extends Controller {
 
     function notFoundAction() {
-
+        \http_response_code(404);
         print_r("<h1>That's a 404</h1>");
     }
 }

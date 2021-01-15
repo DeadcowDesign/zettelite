@@ -17,6 +17,14 @@ namespace Application\Controller;
 class Controller extends \Core\Controller {
 	
     protected function init() {
+		$ipWhiteList = [
+			"::1"
+		];
+
+		if (!\in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
+			\http_response_code(403);
+			die();
+		}
 		return true;
 	}
 }

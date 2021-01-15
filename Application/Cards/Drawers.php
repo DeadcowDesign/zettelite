@@ -63,6 +63,10 @@ class Drawers
 
         $targetDrawer = CARD_FOLDER . DIRECTORY_SEPARATOR . $drawer;
 
+        if (\file_exists($targetDrawer)) {
+            return false;
+        }
+        
         if (!\mkdir($targetDrawer, 0755)) {
 
             return false;
@@ -80,7 +84,6 @@ class Drawers
      * is already created when we first save the card.
      */
     public function addToDrawer($card) {
-        var_dump($card);
 
         $targetDrawer = CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer;
 
@@ -93,7 +96,25 @@ class Drawers
             $listing = \fopen($targetDrawer . DIRECTORY_SEPARATOR . "index.csv", "a");
             \fputcsv($listing, [$card->id, $card->title]);
             \fclose($listing);
+        } else {
+            $tmpFile = \fopen($targetDrawer . DIRECTORY_SEPARATOR . "tmp.csv", "w");
+            $listing = \fopen($targetDrawer . DIRECTORY_SEPARATOR . "index.csv", "r");
+
+            while ( ($data = \fgetcsv($listing, 1000, ",")) !== FALSE) {
+                if(\is_array($data)) {
+                    if ($data[0] !== $card->id) {
+                        \fputcsv($tmpFile, $data);
+                    } else {
+                        \fputcsv($tmpFile, [$card->id, $card->title]);
+                    }
+                }
+            };
+            \fclose($tmpFile);
+            \fclose($listing);
+            unlink($targetDrawer . DIRECTORY_SEPARATOR . "index.csv");
+            rename($targetDrawer . DIRECTORY_SEPARATOR . "tmp.csv", $targetDrawer . DIRECTORY_SEPARATOR . "index.csv");
         }
+
         $cardFileHandle = fopen(CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer . DIRECTORY_SEPARATOR . $card->id . '.json', 'w');
         fwrite($cardFileHandle, json_encode($card));
         fclose($cardFileHandle);

@@ -562,4 +562,6 @@
   }
   .ql-container.ql-snow {
     /*border: 1px solid #ccc;*/
+    overflow: scroll;
+    height: 40vh;
   }
