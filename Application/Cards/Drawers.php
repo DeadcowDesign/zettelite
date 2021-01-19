@@ -30,6 +30,29 @@ class Drawers
         return $drawers;
     }
 
+    public function getAllDrawers() {
+        $cardList = [];
+        $dirListing = \scandir(CARD_FOLDER);
+
+        foreach($dirListing as $drawer) {
+            if (\is_dir(CARD_FOLDER . DIRECTORY_SEPARATOR . $drawer)) {
+
+                if (\file_exists(CARD_FOLDER . DIRECTORY_SEPARATOR . $drawer . DIRECTORY_SEPARATOR . 'index.csv')) {
+                    $handle = \fopen(CARD_FOLDER . DIRECTORY_SEPARATOR . $drawer . DIRECTORY_SEPARATOR . 'index.csv', 'r');
+
+                    while (($data = \fgetcsv($handle)) !== FALSE) {
+                        $card = new \stdClass();
+                        $card->id = $data[0];
+                        $card->title = $data[1];
+                        $card->drawer = $drawer;
+                        array_push($cardList, $card);
+                    }
+                }
+            }
+        }
+
+        return $cardList;
+    }
     /**
      * getDrawer - given a drawer name, this retrieves the list of cards from the
      * drawers index file and returns the ids and titles as an array. We use a 
@@ -114,12 +137,91 @@ class Drawers
             unlink($targetDrawer . DIRECTORY_SEPARATOR . "index.csv");
             rename($targetDrawer . DIRECTORY_SEPARATOR . "tmp.csv", $targetDrawer . DIRECTORY_SEPARATOR . "index.csv");
         }
-
+        
         $cardFileHandle = fopen(CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer . DIRECTORY_SEPARATOR . $card->id . '.json', 'w');
+
         fwrite($cardFileHandle, json_encode($card));
         fclose($cardFileHandle);
 
+        if ($card->parent) {
+            echo($card->parent);
+            $parentFilename = CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer . DIRECTORY_SEPARATOR . $card->parent . '.json';
+            if (\file_exists($parentFilename)) {
+                $parentCard = \file_get_contents($parentFilename);
+                $parentCardData = \json_decode($parentCard);
+
+                if (!\property_exists($parentCardData, 'children')) {
+                    $parentCardData->children = [];
+                }
+
+                if (!\in_array($parentCardData->children, $card->id)) {
+                    array_push($parentCardData->children, $card->id);
+                    $parentCardHandle = fopen($parentFilename, 'w');
+                    fwrite($parentCardHandle, json_encode($parentCardData));
+                    fclose($parentCardHandle);
+            
+                }
+            }
+        }
+
         return true;
+    }
+
+    /**
+     * VERY RAW file uploader.
+     * 
+     * TODO - make this suck less before prod.
+     */
+    public function saveImage() {
+
+        if (empty($_FILES)) {
+            echo("No file received");
+            \http_response_code(400);
+            exit;
+        }
+
+        $fileExtension = pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
+
+        if ($_FILES["image"]["size"] > (2*MB)) {
+            echo("Image files must be smaller than 2MB");
+            \http_response_code(413);
+            exit;
+        }
+
+        switch ($fileExtension) {
+            case 'jpg':
+            case 'jpeg':
+                if(!\imagecreatefromjpeg($_FILES["image"]["tmp_name"])) {
+                    echo("This does not appear to be a valid jpg image");
+                    \http_response_code(415);
+                    exit;
+                }
+                break;
+            case 'png':
+                if(!\imagecreatefrompng($_FILES["image"]["tmp_name"])) {
+                    echo("This does not appear to be a valid png image");
+                    \http_response_code(415);
+                    exit;
+                }
+                break;
+            case 'gif':
+                if(!\imagecreatefromgif($_FILES["image"]["tmp_name"])) {
+                    echo("This does not appear to be a valid gif image");
+                    \http_response_code(415);
+                    exit;
+                }
+                break;
+            default:
+                echo("File upload only accepts gif jpeg or png files");
+                \http_response_code(415);
+                exit;
+        }
+
+        var_dump($_FILES);
+        $target = CARD_FOLDER . DIRECTORY_SEPARATOR .  $_POST['drawer'] . DIRECTORY_SEPARATOR . $_FILES["image"]["name"];
+        move_uploaded_file($_FILES["image"]["tmp_name"], $target);
+        $outputURL = BASE_URL . 'cache/' . $_POST['drawer'] . '/' . $_FILES["image"]["name"];
+        return $outputURL;
     }
 
     /**

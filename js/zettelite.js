@@ -11,6 +11,33 @@
  * Edit buttons.
  */
 
+ /**
+  * Set up custom quill link for internal card links
+  */
+var InlineBlot = Quill.import('blots/inline');
+class LinkBlot extends InlineBlot {
+  static create(data) {
+    console.log(data);
+    const node = super.create(data);
+    node.setAttribute('data-drawer', data.drawer);
+    node.setAttribute('data-id', data.id);
+    node.setAttribute('href', "javascript:;");
+    node.setAttribute('onclick', 'internalLink(this)');
+    node.innerText = '[[' + data.title + ']]';
+    console.log(node);
+    return node;
+  }
+  static value(domNode) {
+		const { src, custom } = domNode.dataset;
+		return { src, custom };
+	}
+}
+LinkBlot.blotName = 'linkBlot';
+LinkBlot.className = 'link-blot';
+LinkBlot.tagName = 'a';
+Quill.register({ 'formats/linkBlot': LinkBlot });
+Quill.register("modules/imageUploader", ImageUploader);
+
 var quill = null;
 var cardIndex = {};
 var quillBuffer = '';   // This is what gets inserted into content when a card is updated
@@ -20,7 +47,46 @@ var isEditing = false;
 var cardModal = document.getElementById("card-modal");
 var drawerModal = document.getElementById("drawer-modal");
 quill = new Quill('#quill', {
-    theme: 'snow'
+    theme: 'snow',
+    modules: {
+        toolbar: {
+            container: [
+                [{ header: [1, 2, 3, false] }],
+                ["bold", "italic"],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ["clean"],
+                ["image"]
+              ]
+        },
+
+        imageUploader: {
+            upload: file => {
+              return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append("image", file);
+                formData.append("drawer", document.getElementById("card-drawer-input").value);
+                fetch(
+                  "/zettelite/api/newImage",
+                  {
+                    method: "POST",
+                    body: formData
+                  }
+                )
+                  .then(response => response.json())
+                  .then(result => {
+                    console.log(result);
+                    resolve(result);
+                  })
+                  .catch(error => {
+                    reject("Upload failed");
+                    console.error("Error:", error);
+                  });
+              });
+            }
+          }
+    }
 });
 
 // SECTION Drawer/Index Functions
@@ -222,6 +288,7 @@ function buildIndex(drawerName) {
         e.preventDefault();
         cardModal.classList.add("active");
         document.getElementById("card-drawer-input").value = drawerName;
+        document.getElementById("card-title-input").focus();
     });
 
     container.appendChild(newButtonNode);
@@ -233,7 +300,11 @@ function buildIndex(drawerName) {
         let cardText = document.createTextNode(data.title);
         cardNode.appendChild(cardText);
         cardNode.addEventListener('click', e => {
-            getCard(drawerName, data.id, buildCard);
+            if (document.getElementById('card-modal').classList.contains('active')) {
+                insertAtCaret(drawerName, data.id, data.title);
+            } else {
+                getCard(drawerName, data.id, buildCard);
+            }
         })
 
         container.appendChild(cardNode);
@@ -275,23 +346,23 @@ function saveCard(callback) {
         title   = document.getElementById('card-title-input').value,
         parent  = document.getElementById('card-parent-input').value,
         drawer = document.getElementById('card-drawer-input').value;
+        children = document.getElementById('card-children-input').value;
 
     let formData = new FormData();
-    formData.append('id', id);
-    formData.append('title', title);
-    formData.append('parent', parent);
-    formData.append('drawer', drawer);
-    formData.append('content', quill.root.innerHTML);
+        formData.append('id', id);
+        formData.append('title', title);
+        formData.append('parent', parent);
+        formData.append('drawer', drawer);
+        formData.append('children', JSON.stringify(children.split("|")));
+        formData.append('content', quill.root.innerHTML);
 
     let xhr = new XMLHttpRequest();
     xhr.open('POST', '/zettelite/api/addNote/', true);
     xhr.onload = function () {
         if (this.status == 200) {
-            console.log(xhr.responseText);
             callback();
             clearCardEditor();
             getCard(drawer, id, (cardData) => {
-                console.log(cardData);
                 buildCard(cardData, true);
             });
         }
@@ -360,9 +431,10 @@ function buildCard(cardData, force) {
             cardParent.setAttribute('data-id', cardIndex[cardData.drawer][cardData.parent].id);
             cardParent.innerText = `${cardIndex[cardData.drawer][cardData.parent].title} > `;
             cardParent.addEventListener('click', e => {
-                getCard(cardData.drawer, cardIndex[cardData.drawer][cardData.parent].id, (cardData) => {
-                    buildCard(cardData, false);
-                });
+
+                    getCard(cardData.drawer, cardIndex[cardData.drawer][cardData.parent].id, (cardData) => {
+                        buildCard(cardData, false);
+                    });
             });
         }
         cardParent.classList.add("subtle");
@@ -384,8 +456,12 @@ function buildCard(cardData, force) {
         document.getElementById('card-id-input').value = cardData.id;
         document.getElementById('card-parent-input').value = cardData.parent;
         document.getElementById('card-drawer-input').value = cardData.drawer;
+        if (cardData.children) {
+            document.getElementById('card-children-input').value = cardData.children.join("|");
+        }
         cardModal.classList.add("active");
         document.getElementById("card-title-input").value = cardData.title;
+        document.getElementById("card-title-input").focus();
         quill.root.innerHTML = cardData.content;
         buffer = cardData.content;
     });
@@ -425,13 +501,84 @@ function buildCard(cardData, force) {
         document.getElementById('card-parent-input').value = cardData.id;
     });
     let cardDate = document.createElement('div');
-    cardDate.classList.add("subtle");
-    cardDate.innerText = `Created on: ${cardData.id.substring(0,4)}/${cardData.id.substring(4,6)}/${cardData.id.substring(6,8)} ${cardData.id.substring(8,10)}:${cardData.id.substring(10,12)}`;
+    cardDate.classList.add("subtle", "status-bar-subtle");
+    cardDate.innerHTML = `<div>In: ${cardData.drawer}</div>`;
+    cardDate.innerHTML += `<div>Created on: ${cardData.id.substring(0,4)}/${cardData.id.substring(4,6)}/${cardData.id.substring(6,8)} ${cardData.id.substring(8,10)}:${cardData.id.substring(10,12)}</div>`;
     cardStatus.appendChild(cardDate);
     
+ 
+    let childContainer = document.createElement('p');
+    childContainer.innerText = 'No Children';
+
+    let linksContainer = document.createElement('div');
+    linksContainer.classList.add("child-links-container");
+
+
+    if (cardData.hasOwnProperty('children')) {
+        // TODO - this is really shit. Fix it.
+        if ( (cardData.hasOwnProperty('children').length = 1) 
+        && (cardData.hasOwnProperty('children')[0] == "") ) {
+            //break;
+        }
+
+        childContainer = document.createElement('details');
+        childContainer.classList.add("card-child-links");
+
+        let summary = document.createElement('summary');
+        summary.innerHTML = cardData.children.length + ' children';
+        childContainer.appendChild(summary);
+
+        let link = null;
+
+        cardData.children.forEach( child => {
+            if (cardIndex[cardData.drawer].hasOwnProperty(child)) {
+
+                link = document.createElement('a');
+                link.setAttribute("href", "javascript:;");
+                link.setAttribute("data-id", child);
+                link.innerText = '[[' + cardIndex[cardData.drawer][child].title + ']]';
+                
+                link.addEventListener('click', e => {
+                    getCard(cardData.drawer, cardIndex[cardData.drawer][child].id, (cardData) => {
+                        buildCard(cardData, false);
+                    });
+                });
+
+                linksContainer.appendChild(link);
+            };
+
+        });
+    }
+    childContainer.appendChild(linksContainer);
     cardElement.appendChild(cardStatus);
+    cardElement.appendChild(childContainer);
+
     cardContainer.appendChild(cardElement);
 
+}
+
+/**
+ * Insert a link to a clicked card at the caret.
+ * @param {string} drawer The name of the drawer
+ * @param {string} id the card id
+ * @param {string} title The card title
+ */
+function insertAtCaret(drawer, id, title) {
+    let index = quill.getSelection(true).index;
+    console.log(index);
+    quill.insertEmbed(index, 'linkBlot', {
+        'title': title,
+        'drawer': drawer,
+        'id': id,
+      }, 'user');
+}
+
+function internalLink(self) {
+    let drawer = self.getAttribute('data-drawer');
+    let id = self.getAttribute('data-id');
+    getCard(drawer, id, (cardData) => {
+        buildCard(cardData, false);
+    });
 }
 
 // ANCHOR reloadCard

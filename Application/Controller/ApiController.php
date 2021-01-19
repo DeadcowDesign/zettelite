@@ -27,6 +27,7 @@ class ApiController extends Controller {
         $noteData->drawer = $_POST['drawer'];
         $noteData->id = isset($_POST['id']) ? $_POST['id'] : '';
         $noteData->parent = isset($_POST['parent']) ? $_POST['parent'] : '';
+        $noteData->children = isset($_POST['children']) ? \json_decode($_POST['children']) : [];
         
         $note = new \Application\Cards\Cards();
         $note->setCard(\json_encode($noteData));
@@ -56,6 +57,14 @@ class ApiController extends Controller {
         \http_response_code(200);
     }
 
+    public function getAllDrawersAction() {
+        $drawers = new \Application\Cards\Drawers();
+    
+        \header('Content-Type: application/json');
+        echo \json_encode($drawers->getAllDrawers());
+        \http_response_code(200);
+    }
+
     public function makeDrawerAction() {
 
         $drawer = new \Application\Cards\Drawers();
@@ -66,5 +75,13 @@ class ApiController extends Controller {
 
         $drawer = new \Application\Cards\Drawers();
         $drawer->createBackup();
+    }
+
+    public function newImageAction($data) {
+        $drawer = new \Application\Cards\Drawers();
+        $result = $drawer->saveImage();
+        \header('Content-Type: application/json');
+        echo \json_encode($result);
+        \http_response_code(200);
     }
 }

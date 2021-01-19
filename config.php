@@ -22,3 +22,8 @@ define("ERROR_CONTROLLER", "Error");
  * User defined configs
  */
 define("CARD_FOLDER", BASE_PATH . DIRECTORY_SEPARATOR . 'cache');
+
+define('KB', 1024);
+define('MB', 1048576);
+define('GB', 1073741824);
+define('TB', 1099511627776);

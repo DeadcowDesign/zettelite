@@ -199,6 +199,9 @@ MAIN PAGE STRUCTURE
     border: var(--theme-border);
 }
 
+.card img {
+    max-width: 100%;
+}
 .card-header {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -231,6 +234,35 @@ MAIN PAGE STRUCTURE
     grid-template-columns: auto 1fr;
     align-items: center;
 }
+
+.status-bar-subtle {
+    display: grid;
+    grid-template-columns: auto auto auto;
+    font-size: 0.75em;
+    margin-right: 0.75em;
+}
+
+.card summary{
+    padding: 1em;
+    padding-bottom: 0;
+    outline: none;
+    cursor: pointer;
+}
+
+.card .child-links-container {
+    padding: 1em;
+}
+
+.card details a {
+    padding: 1em;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.card details {
+    padding-bottom: 1em;
+}
+
 .card-links {
     padding: 0.5em 0;
     margin: 0 1em;
