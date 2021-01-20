@@ -11,83 +11,8 @@
  * Edit buttons.
  */
 
- /**
-  * Set up custom quill link for internal card links
-  */
-var InlineBlot = Quill.import('blots/inline');
-class LinkBlot extends InlineBlot {
-  static create(data) {
-    console.log(data);
-    const node = super.create(data);
-    node.setAttribute('data-drawer', data.drawer);
-    node.setAttribute('data-id', data.id);
-    node.setAttribute('href', "javascript:;");
-    node.setAttribute('onclick', 'internalLink(this)');
-    node.innerText = '[[' + data.title + ']]';
-    console.log(node);
-    return node;
-  }
-  static value(domNode) {
-		const { src, custom } = domNode.dataset;
-		return { src, custom };
-	}
-}
-LinkBlot.blotName = 'linkBlot';
-LinkBlot.className = 'link-blot';
-LinkBlot.tagName = 'a';
-Quill.register({ 'formats/linkBlot': LinkBlot });
-Quill.register("modules/imageUploader", ImageUploader);
 
-var quill = null;
-var cardIndex = {};
-var quillBuffer = '';   // This is what gets inserted into content when a card is updated
-var baseURL = '/zettelite';
-var cardCache = 'cache';
-var isEditing = false;
-var cardModal = document.getElementById("card-modal");
-var drawerModal = document.getElementById("drawer-modal");
-quill = new Quill('#quill', {
-    theme: 'snow',
-    modules: {
-        toolbar: {
-            container: [
-                [{ header: [1, 2, 3, false] }],
-                ["bold", "italic"],
-                ['blockquote', 'code-block'],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                ['link'],
-                ["clean"],
-                ["image"]
-              ]
-        },
 
-        imageUploader: {
-            upload: file => {
-              return new Promise((resolve, reject) => {
-                const formData = new FormData();
-                formData.append("image", file);
-                formData.append("drawer", document.getElementById("card-drawer-input").value);
-                fetch(
-                  "/zettelite/api/newImage",
-                  {
-                    method: "POST",
-                    body: formData
-                  }
-                )
-                  .then(response => response.json())
-                  .then(result => {
-                    console.log(result);
-                    resolve(result);
-                  })
-                  .catch(error => {
-                    reject("Upload failed");
-                    console.error("Error:", error);
-                  });
-              });
-            }
-          }
-    }
-});
 
 // SECTION Drawer/Index Functions
 
@@ -353,7 +278,9 @@ function saveCard(callback) {
         formData.append('title', title);
         formData.append('parent', parent);
         formData.append('drawer', drawer);
-        formData.append('children', JSON.stringify(children.split("|")));
+        if (children) {
+            formData.append('children', JSON.stringify(children.split("|")));
+        }
         formData.append('content', quill.root.innerHTML);
 
     let xhr = new XMLHttpRequest();
@@ -510,46 +437,45 @@ function buildCard(cardData, force) {
     let childContainer = document.createElement('p');
     childContainer.innerText = 'No Children';
 
-    let linksContainer = document.createElement('div');
-    linksContainer.classList.add("child-links-container");
-
 
     if (cardData.hasOwnProperty('children')) {
-        // TODO - this is really shit. Fix it.
-        if ( (cardData.hasOwnProperty('children').length = 1) 
-        && (cardData.hasOwnProperty('children')[0] == "") ) {
-            //break;
+        let linksContainer = document.createElement('div');
+        linksContainer.classList.add("child-links-container");
+
+        if (cardData.children.length) {
+
+            childContainer = document.createElement('details');
+            childContainer.classList.add("card-child-links");
+
+            let summary = document.createElement('summary');
+            summary.innerHTML = cardData.children.length + ' children';
+            childContainer.appendChild(summary);
+
+            let link = null;
+
+            cardData.children.forEach( child => {
+                if (cardIndex[cardData.drawer].hasOwnProperty(child)) {
+
+                    link = document.createElement('a');
+                    link.setAttribute("href", "javascript:;");
+                    link.setAttribute("data-id", child);
+                    link.innerText = '[[' + cardIndex[cardData.drawer][child].title + ']]';
+                    
+                    link.addEventListener('click', e => {
+                        getCard(cardData.drawer, cardIndex[cardData.drawer][child].id, (cardData) => {
+                            buildCard(cardData, false);
+                        });
+                    });
+
+                    linksContainer.appendChild(link);
+                };
+
+            });
+            
+            childContainer.appendChild(linksContainer);
         }
 
-        childContainer = document.createElement('details');
-        childContainer.classList.add("card-child-links");
-
-        let summary = document.createElement('summary');
-        summary.innerHTML = cardData.children.length + ' children';
-        childContainer.appendChild(summary);
-
-        let link = null;
-
-        cardData.children.forEach( child => {
-            if (cardIndex[cardData.drawer].hasOwnProperty(child)) {
-
-                link = document.createElement('a');
-                link.setAttribute("href", "javascript:;");
-                link.setAttribute("data-id", child);
-                link.innerText = '[[' + cardIndex[cardData.drawer][child].title + ']]';
-                
-                link.addEventListener('click', e => {
-                    getCard(cardData.drawer, cardIndex[cardData.drawer][child].id, (cardData) => {
-                        buildCard(cardData, false);
-                    });
-                });
-
-                linksContainer.appendChild(link);
-            };
-
-        });
     }
-    childContainer.appendChild(linksContainer);
     cardElement.appendChild(cardStatus);
     cardElement.appendChild(childContainer);
 

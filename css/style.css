@@ -7,6 +7,7 @@
     --theme-light-blue: rgba(160, 214, 226, 1);
     --theme-dark-blue: rgba(40, 156, 168, 1);
     --theme-light-grey: #ccc;
+    --theme-very-light-grey: #eee;
     --theme-mid-grey: #666;
     --theme-white: white;
     --theme-black: black;
@@ -200,7 +201,7 @@ MAIN PAGE STRUCTURE
 }
 
 .card img {
-    max-width: 100%;
+    max-width: 50%;
 }
 .card-header {
     display: grid;
@@ -370,29 +371,6 @@ header h1:first-letter {
     justify-items: end;
     grid-template-columns: 1fr auto auto;
 }
-/* EDITING OVERLAY - Meh. Not sure about this...
-.overlay {
-    position: absolute;
-    left: -1000px;
-    top: -1000px;
-    width: 0px;
-    height: 0px;
-}
-
-.edit-mode .overlay {
-    position: absolute;
-    width: auto;
-    height: auto;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-
-    background-color: rgba(0,0,0,0.7);
-    backdrop-filter: blur(40px);
-    z-index: 1;
-}
-*/
 
 .about h2 {
     margin: 0;
@@ -431,4 +409,11 @@ footer {
 footer a {
     text-decoration: underline;
     cursor: pointer;
+}
+
+/** Typography for the editor */
+blockquote {
+    border-left: 3px solid var(--theme-light-grey);
+    background: var(--theme-very-light-grey);
+    padding-left: 1em;
 }

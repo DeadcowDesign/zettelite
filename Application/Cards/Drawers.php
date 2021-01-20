@@ -144,17 +144,12 @@ class Drawers
         fclose($cardFileHandle);
 
         if ($card->parent) {
-            echo($card->parent);
             $parentFilename = CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer . DIRECTORY_SEPARATOR . $card->parent . '.json';
             if (\file_exists($parentFilename)) {
                 $parentCard = \file_get_contents($parentFilename);
                 $parentCardData = \json_decode($parentCard);
 
-                if (!\property_exists($parentCardData, 'children')) {
-                    $parentCardData->children = [];
-                }
-
-                if (!\in_array($parentCardData->children, $card->id)) {
+                if (!\in_array($card->id, $parentCardData->children)) {
                     array_push($parentCardData->children, $card->id);
                     $parentCardHandle = fopen($parentFilename, 'w');
                     fwrite($parentCardHandle, json_encode($parentCardData));
@@ -217,7 +212,6 @@ class Drawers
                 exit;
         }
 
-        var_dump($_FILES);
         $target = CARD_FOLDER . DIRECTORY_SEPARATOR .  $_POST['drawer'] . DIRECTORY_SEPARATOR . $_FILES["image"]["name"];
         move_uploaded_file($_FILES["image"]["tmp_name"], $target);
         $outputURL = BASE_URL . 'cache/' . $_POST['drawer'] . '/' . $_FILES["image"]["name"];
