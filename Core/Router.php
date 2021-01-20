@@ -92,11 +92,17 @@ class Router
 
             throw new Exception("Could not resolve route");
         }
+        
+        $path = $_SERVER['REQUEST_URI'];
 
-        $path = str_replace(BASE_URL, '', $_SERVER['REQUEST_URI']);
+        if (BASE_URL !== '') {
+            $path = str_replace(BASE_URL, '', $path);
+        } else {
+
+        }
 
         $path = self::checkRoutesTable($path);
-
+        $path = ltrim($path, '/');
         $path_parts = explode('/', $path);
 
         $route_data = new \stdClass();

@@ -258,6 +258,6 @@ class Drawers
         header('Content-Type: application/zip');
         header("Content-Disposition: attachment; filename='". $zipPath . "'");
         header('Content-Length: ' . filesize($zipPath));
-        header("Location: /zettelite/backup.zip");
+        header("Location: /backup.zip");
     }
 }

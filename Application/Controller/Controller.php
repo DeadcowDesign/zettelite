@@ -18,7 +18,8 @@ class Controller extends \Core\Controller {
 	
     protected function init() {
 		$ipWhiteList = [
-			"::1"
+			"::1",
+			"127.0.0.1"
 		];
 
 		if (!\in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {

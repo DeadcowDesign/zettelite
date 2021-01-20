@@ -54,7 +54,6 @@ Quill.register("modules/imageUploader", ImageUploader);
 var quill = null;
 var cardIndex = {};
 var quillBuffer = '';   // This is what gets inserted into content when a card is updated
-var baseURL = '/zettelite';
 var cardCache = 'cache';
 var isEditing = false;
 var cardModal = document.getElementById("card-modal");
@@ -104,7 +103,7 @@ quill = new Quill('#quill', {
                 formData.append("image", file);
                 formData.append("drawer", document.getElementById("card-drawer-input").value);
                 fetch(
-                  "/zettelite/api/newImage",
+                  "/api/newImage",
                   {
                     method: "POST",
                     body: formData

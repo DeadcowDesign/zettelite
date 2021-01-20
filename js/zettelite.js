@@ -12,7 +12,7 @@
  */
 
 
-
+const BASE_URL = '/';
 
 // SECTION Drawer/Index Functions
 
@@ -118,7 +118,7 @@ function createNewDrawer(title, callback) {
     data.append('drawer', title);
 
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/zettelite/api/makeDrawer/', true);
+    xhr.open('POST', baseURL + '/api/makeDrawer/', true);
     xhr.onload = function () {
         if (this.status == 200) {
             document.getElementById('new-folder').value = '';
@@ -284,7 +284,7 @@ function saveCard(callback) {
         formData.append('content', quill.root.innerHTML);
 
     let xhr = new XMLHttpRequest();
-    xhr.open('POST', '/zettelite/api/addNote/', true);
+    xhr.open('POST', baseURL + '/api/addNote/', true);
     xhr.onload = function () {
         if (this.status == 200) {
             callback();
@@ -471,7 +471,7 @@ function buildCard(cardData, force) {
                 };
 
             });
-            
+
             childContainer.appendChild(linksContainer);
         }
 
@@ -546,7 +546,7 @@ function removeQuill(cardId) {
  */
 function saveBlob() {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/zettelite/api/backup', true);
+    xhr.open('GET', baseURL + '/api/backup', true);
     xhr.responseType = 'blob';
     xhr.onload = function(e) {
         if (this.status == 200) {
