@@ -58,7 +58,7 @@ function buildDrawer(drawer) {
     drawerNode.classList.add('drawer');
     let drawerHeader = document.createElement("h2");
     drawerHeader.classList.add("drawer-title");
-    drawerText = document.createTextNode(drawer);
+    drawerHeader.innerHTML = `<i class="icofont-folder"></i>${drawer}`;
     let cardContainer = document.createElement("div");
     cardContainer.classList.add("drawer-container");
 
@@ -66,11 +66,13 @@ function buildDrawer(drawer) {
         e.preventDefault();
         drawerNode.classList.toggle('open');
         if (drawerNode.classList.contains('open')) {
+            drawerHeader.innerHTML = `<i class="icofont-folder-open"></i>${drawer}`;
             getIndex(drawer, false, buildIndex);
+        } else {
+            drawerHeader.innerHTML = `<i class="icofont-folder"></i>${drawer}`;
         }
     });
     
-    drawerHeader.appendChild(drawerText);
     drawerNode.appendChild(drawerHeader);
     drawerNode.appendChild(cardContainer);
 
@@ -205,25 +207,11 @@ function buildIndex(drawerName) {
 
     let container = drawer.querySelector(".drawer-container");
 
-    let newButtonNode = document.createElement("button");
-    newButtonNode.classList.add("button", 'positive-button');
-    newButtonNode.setAttribute('data-drawer', drawerName);
-    newButtonNode.innerText = "Add new Card";
-    newButtonNode.addEventListener('click', e => {
-        e.preventDefault();
-        cardModal.classList.add("active");
-        document.getElementById("card-drawer-input").value = drawerName;
-        document.getElementById("card-title-input").focus();
-    });
-
-    container.appendChild(newButtonNode);
-
     for(let card in cards) {
         let data = cards[card];
         let cardNode = document.createElement('div');
         cardNode.classList.add("drawer-card");
-        let cardText = document.createTextNode(data.title);
-        cardNode.appendChild(cardText);
+        cardNode.innerHTML = `<i class="icofont-page"></i>${data.title}`
         cardNode.addEventListener('click', e => {
             if (document.getElementById('card-modal').classList.contains('active')) {
                 insertAtCaret(drawerName, data.id, data.title);
@@ -234,6 +222,20 @@ function buildIndex(drawerName) {
 
         container.appendChild(cardNode);
     }
+
+    let newButtonNode = document.createElement("button");
+    newButtonNode.classList.add("button", 'positive-button');
+    newButtonNode.setAttribute('data-drawer', drawerName);
+    newButtonNode.innerHTML = '<i class="icofont-plus"></i>Add new Card';
+    newButtonNode.addEventListener('click', e => {
+        e.preventDefault();
+        cardModal.classList.add("active");
+        document.querySelector(".overlay").classList.add("active");
+        document.getElementById("card-drawer-input").value = drawerName;
+        document.getElementById("card-title-input").focus();
+    });
+
+    container.appendChild(newButtonNode);
 }
 // !SECTION
 
@@ -356,17 +358,22 @@ function buildCard(cardData, force) {
         let cardParent = document.createElement("a");
         if (cardIndex[cardData.drawer].hasOwnProperty(cardData.parent)) {
             cardParent.setAttribute('data-id', cardIndex[cardData.drawer][cardData.parent].id);
-            cardParent.innerText = `${cardIndex[cardData.drawer][cardData.parent].title} > `;
+            cardParent.innerText = `${cardIndex[cardData.drawer][cardData.parent].title}`;
             cardParent.addEventListener('click', e => {
 
                     getCard(cardData.drawer, cardIndex[cardData.drawer][cardData.parent].id, (cardData) => {
                         buildCard(cardData, false);
                     });
             });
+            
         }
         cardParent.classList.add("subtle");
         
-        cardHeaderTitle.appendChild(cardParent);    
+        cardHeaderTitle.appendChild(cardParent);
+        let linkSpacer = document.createElement('span');
+        linkSpacer.innerText = ' > ';
+        cardHeaderTitle.appendChild(linkSpacer);
+
     }
     let cardHeaderTitleText = document.createElement('b');
     cardHeaderTitleText.innerText = cardData.title;
@@ -377,8 +384,7 @@ function buildCard(cardData, force) {
 
     let editButton = document.createElement('div');
     editButton.classList.add('button','card-edit-button', 'positive-button');
-    let editButtonText = document.createTextNode("Edit");
-    editButton.appendChild(editButtonText);
+    editButton.innerHTML = '<i class="icofont-edit"></i>Edit';
     editButton.addEventListener('click', e => {
         document.getElementById('card-id-input').value = cardData.id;
         document.getElementById('card-parent-input').value = cardData.parent;
@@ -387,6 +393,7 @@ function buildCard(cardData, force) {
             document.getElementById('card-children-input').value = cardData.children.join("|");
         }
         cardModal.classList.add("active");
+        document.querySelector(".overlay").classList.add("active");
         document.getElementById("card-title-input").value = cardData.title;
         document.getElementById("card-title-input").focus();
         quill.root.innerHTML = cardData.content;
@@ -397,8 +404,7 @@ function buildCard(cardData, force) {
 
     let cancelButton = document.createElement('div');
     cancelButton.classList.add('button','card-cancel-button', 'negative-button');
-    let cancelButtonText = document.createTextNode("Close");
-    cancelButton.appendChild(cancelButtonText);
+    cancelButton.innerHTML = '<i class="icofont-close"></i>Close';
     cancelButton.addEventListener('click', e => {
         document.querySelector(`[data-card-id="${cardData.id}"]`).remove();
     });
@@ -424,6 +430,7 @@ function buildCard(cardData, force) {
     cardStatus.addEventListener('click', e => {
         e.preventDefault();
         cardModal.classList.add("active");
+        document.querySelector(".overlay").classList.add("active");
         document.getElementById("card-drawer-input").value = cardData.drawer;
         document.getElementById('card-parent-input').value = cardData.id;
     });
@@ -579,6 +586,7 @@ function saveBlob() {
 /* Event Listener for the "Add Drawer" button */
 document.getElementById("add-drawer-button").addEventListener('click', e => {
     document.getElementById("folder-modal").classList.add("active");
+    document.querySelector(".overlay").classList.add("active");
     document.getElementById("new-folder").focus();
 })
 
@@ -588,6 +596,8 @@ document.getElementById("folder-modal-save").addEventListener('click', e => {
     createNewDrawer(document.getElementById('new-folder').value, () => {
         refreshDrawers();
         document.getElementById("folder-modal").classList.remove("active");
+        document.querySelector(".overlay").classList.remove("active");
+
     });
 });
 
@@ -595,6 +605,8 @@ document.getElementById("folder-modal-save").addEventListener('click', e => {
 document.getElementById("folder-modal-cancel").addEventListener('click', e => {
     e.preventDefault();
     document.getElementById("folder-modal").classList.remove("active");
+    document.querySelector(".overlay").classList.remove("active");
+
     document.getElementById('new-folder').value = '';
 
 });
@@ -605,6 +617,8 @@ document.getElementById("folder-modal-cancel").addEventListener('click', e => {
 document.getElementById("card-modal-cancel").addEventListener('click', e => {
     e.preventDefault();
     document.getElementById("card-modal").classList.remove("active");
+    document.querySelector(".overlay").classList.remove("active");
+
     clearCardEditor();
 
 });
@@ -616,6 +630,8 @@ document.getElementById("card-modal-save").addEventListener('click', e => {
     saveCard(() => {
         let drawer = document.getElementById('card-drawer-input').value;
         document.getElementById("card-modal").classList.remove("active");
+        document.querySelector(".overlay").classList.remove("active");
+
         refreshIndex(drawer);
     });
 
