@@ -110,6 +110,7 @@ class Router
         $route_data->controller = $this->dehyphenate(array_shift($path_parts));
         $route_data->action     = $this->dehyphenate(array_shift($path_parts));
         $route_data->data       = $path_parts;
+
         return $route_data;
     }
 

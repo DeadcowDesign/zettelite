@@ -5,161 +5,101 @@ namespace Application\Cards;
 class Drawers
 {
     protected $Drawer;
+    protected $Database;
+
+    public function __construct() {
+        $this->Database = new \Application\Database\Items();
+        $this->Database->connect();
+    }
 
     /**
-     * getDrawers - returns the list of Drawers from the card cache directory.
-     * Drawers are simply directories, this function lists the dirs in the cache
-     * folder, removes the top and parent listings, and outputs the result in an
-     * array. Note that this function does not currently handle nested directories
+     * makeDrawer - creates a drawer directory in the Cards path and populates it
+     * with an index.csv file which will hold a list of cards.
      * 
+     * @return {int} The last insert ID which should be the new drawer id
      */
-    public function getDrawers() {
+    public function createDrawer($data) {
+        if (!\is_array($data)) return false;
+        
+        if (!array_key_exists('title', $data) || 
+            !array_key_exists('cabinet', $data) 
+        ) {
 
-        $dirListing = \scandir(CARD_FOLDER);
-        $drawers = [];
-
-        foreach($dirListing as $drawer) {
-
-            if (\is_dir(CARD_FOLDER . DIRECTORY_SEPARATOR . $drawer)) {
-                array_push($drawers, $drawer);
-            }
+            return false;
         }
 
-        $drawers = array_values(array_diff($drawers, array('..', '.')));
+        return $this->Database->createItem($data);
+    }
+
+    public function readDrawer($data) {
+        
+        $columns = ['id', 'title'];
+        $clauses = ['type' => 'drawer'];
+
+        if (array_key_exists('id', $data)) {
+            $clauses['id'] = $data['id'];
+        }
+
+        if (array_key_exists('cabinet', $data)) {
+            $clauses['parent'] = $data['cabinet'];
+        }
+
+        $drawers = $this->Database->readItem($columns, $clauses);
+
+        foreach($drawers as &$drawer) {
+
+            $drawer['cards'] = $this->readCards($drawer['id']);
+        }
 
         return $drawers;
     }
 
-    public function getAllDrawers() {
-        $cardList = [];
-        $dirListing = \scandir(CARD_FOLDER);
+    public function readCards($parent) {
 
-        foreach($dirListing as $drawer) {
-            if (\is_dir(CARD_FOLDER . DIRECTORY_SEPARATOR . $drawer)) {
+        $columns = ['id', 'title', 'parent'];
+        $clause = ['parent' => $parent, 'type' => 'card'];
+        $cards = $this->Database->readItem($columns, $clause);
 
-                if (\file_exists(CARD_FOLDER . DIRECTORY_SEPARATOR . $drawer . DIRECTORY_SEPARATOR . 'index.csv')) {
-                    $handle = \fopen(CARD_FOLDER . DIRECTORY_SEPARATOR . $drawer . DIRECTORY_SEPARATOR . 'index.csv', 'r');
-
-                    while (($data = \fgetcsv($handle)) !== FALSE) {
-                        $card = new \stdClass();
-                        $card->id = $data[0];
-                        $card->title = $data[1];
-                        $card->drawer = $drawer;
-                        array_push($cardList, $card);
-                    }
-                }
-            }
+        foreach($cards as &$card) {
+            $card['children'] = $this->readCards($card['id']);
         }
 
-        return $cardList;
+        return $cards;
     }
+    
+    /**
+     * makeDrawer - creates a drawer directory in the Cards path and populates it
+     * with an index.csv file which will hold a list of cards.
+     * 
+     * @return {int} The last insert ID which should be the new drawer id
+     */
+    public function updateDrawer($data) {
+
+        if (!\is_array($data)) return false;
+
+        if (!array_key_exists('title', $data) || 
+            !array_key_exists('id', $data)
+        ) {
+
+            return false;
+        }
+
+        return $this->Database->updateItem($data);
+    }
+
     /**
      * getDrawer - given a drawer name, this retrieves the list of cards from the
      * drawers index file and returns the ids and titles as an array. We use a 
      * index to avoid having to open every card file to get the title and id from
      * each one whenever a drawer is accessed.
      */
-    public function getDrawer($drawer = '') {
+    public function deleteDrawer($data) {
 
-        $targetDrawer = CARD_FOLDER . DIRECTORY_SEPARATOR . $drawer . DIRECTORY_SEPARATOR;
-        $cards = [];
+        if (!\is_array($data)) return false;
 
-        if (($handle = fopen($targetDrawer . "index.csv", "r")) !== FALSE) {
+        if (!array_key_exists('id', $data)) return false;
 
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-
-                if ($data[0]) {
-                    array_push($cards, [$data[0], $data[1]]);
-                }
-            }
-            fclose($handle);
-        }
-
-        return $cards;
-    }
-
-    /**
-     * makeDrawer - creates a drawer directory in the Cards path and populates it
-     * with an index.csv file which will hold a list of cards.
-     */
-    public function makeDrawer($drawer) {
-
-        $targetDrawer = CARD_FOLDER . DIRECTORY_SEPARATOR . $drawer;
-
-        if (\file_exists($targetDrawer)) {
-            return false;
-        }
-        
-        if (!\mkdir($targetDrawer, 0755)) {
-
-            return false;
-        }
-
-        $listing = fopen($targetDrawer . DIRECTORY_SEPARATOR . "index.csv", "w");
-        fclose($listing);
-
-        return true;
-    }
-
-    /**
-     * addToDrawer - add a card to a drawer. This function adds the card details
-     * to the drawer's index file. We do not need to check if this exists as this
-     * is already created when we first save the card.
-     */
-    public function addToDrawer($card) {
-
-        $targetDrawer = CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer;
-
-        if (!\is_dir($targetDrawer)) {
-            $this->makeDrawer($card->drawer);
-        }
-
-        // If our file exists it should alredy be in the directory so we can skip
-        if (!\file_exists(CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer . DIRECTORY_SEPARATOR . $card->id . '.json')) {
-            $listing = \fopen($targetDrawer . DIRECTORY_SEPARATOR . "index.csv", "a");
-            \fputcsv($listing, [$card->id, $card->title]);
-            \fclose($listing);
-        } else {
-            $tmpFile = \fopen($targetDrawer . DIRECTORY_SEPARATOR . "tmp.csv", "w");
-            $listing = \fopen($targetDrawer . DIRECTORY_SEPARATOR . "index.csv", "r");
-
-            while ( ($data = \fgetcsv($listing, 1000, ",")) !== FALSE) {
-                if(\is_array($data)) {
-                    if ($data[0] !== $card->id) {
-                        \fputcsv($tmpFile, $data);
-                    } else {
-                        \fputcsv($tmpFile, [$card->id, $card->title]);
-                    }
-                }
-            };
-            \fclose($tmpFile);
-            \fclose($listing);
-            unlink($targetDrawer . DIRECTORY_SEPARATOR . "index.csv");
-            rename($targetDrawer . DIRECTORY_SEPARATOR . "tmp.csv", $targetDrawer . DIRECTORY_SEPARATOR . "index.csv");
-        }
-        
-        $cardFileHandle = fopen(CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer . DIRECTORY_SEPARATOR . $card->id . '.json', 'w');
-
-        fwrite($cardFileHandle, json_encode($card));
-        fclose($cardFileHandle);
-
-        if ($card->parent) {
-            $parentFilename = CARD_FOLDER . DIRECTORY_SEPARATOR . $card->drawer . DIRECTORY_SEPARATOR . $card->parent . '.json';
-            if (\file_exists($parentFilename)) {
-                $parentCard = \file_get_contents($parentFilename);
-                $parentCardData = \json_decode($parentCard);
-
-                if (!\in_array($card->id, $parentCardData->children)) {
-                    array_push($parentCardData->children, $card->id);
-                    $parentCardHandle = fopen($parentFilename, 'w');
-                    fwrite($parentCardHandle, json_encode($parentCardData));
-                    fclose($parentCardHandle);
-            
-                }
-            }
-        }
-
-        return true;
+        return $this->Database->deleteItem($data['id']);
     }
 
     /**

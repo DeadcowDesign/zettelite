@@ -16,72 +16,94 @@ namespace Application\Controller;
  */
 class ApiController extends Controller {
 
-    /**
-     * This is the page that is available at either /home/index, or the root
-     * page of the website.
-     */
-    public function addNoteAction($note = '') {
-        $noteData = new \stdClass();
-        $noteData->title = $_POST['title'];
-        $noteData->content = $_POST['content'];
-        $noteData->drawer = $_POST['drawer'];
-        $noteData->id = isset($_POST['id']) ? $_POST['id'] : '';
-        $noteData->parent = isset($_POST['parent']) ? $_POST['parent'] : '';
-        $noteData->children = isset($_POST['children']) ? \json_decode($_POST['children']) : [];
+    protected $Cabinets = null;
+    protected $Drawers = null;
+    protected $Cards = null;
+
+    public function init() {
+        $this->Cabinets = new \Application\Cards\Cabinets();
+        $this->Drawers = new \Application\Cards\Drawers();
+        $this->Cards = new \Application\Cards\Cards();
+    }
+    public function createCabinetAction() {
+
+        $this->respondWithJSON(200, $this->Cabinets->createCabinet($_POST));
+    }
+
+    public function readCabinetAction() {
         
-        $note = new \Application\Cards\Cards();
-        $note->setCard(\json_encode($noteData));
-        $id = $note->saveCard();
+        $this->respondWithJSON(200, $this->Cabinets->readCabinet());
 
+    }
 
+    public function updateCabinetAction($data) {
+
+        $this->respondWithJSON(200, $this->Cabinets->updateCabinet($data));
+    }
+
+    public function deleteCabinetAction() {
+                
+        $this->respondWithJSON(200, $this->Cabinets->deleteCabinet($_POST));
+    }
+
+    public function createDrawerAction() {
+
+        $this->respondWithJSON(200, $this->Drawers->createDrawer($_POST));
+    }
+
+    public function readDrawerAction() {
+
+        $this->respondWithJSON(200, $this->Drawers->readDrawer($_POST));
+    }
+
+    public function updateDrawerAction() {
+
+        $this->respondWithJSON(200, $this->Drawers->updateDrawer($_POST));
+    }
+
+    public function deleteDrawer() {
+
+        $this->respondWithJSON(200, $this->Drawers->deleteDrawer());
+    }
+
+    public function createCardAction() {
+
+        $this->respondWithJSON(200, $this->Cards->createCard($_POST));
+    }
+
+    public function readCardsAction() {
+
+        $this->respondWithJSON(200, $this->Cards->readCards($_POST));
+    }
+
+    public function readCardAction($data) {
+
+        $this->respondWithJSON(200, $this->Cards->readCard($_POST));
+    }
+
+    public function updateCardAction() {
+
+        $this->respondWithJSON(200, $this->Cards->updateCard($_POST));
+    }
+
+    public function deleteCardAction() {
+
+        $this->respondWithJSON(200, $this->Cards->deleteCard($_POST));
+    }
+
+    protected function respondWithJSON(int $code = 200, $message = '') {
         \header('Content-Type: application/json');
-        \header('Card-Id: ' . $id);
-        echo $id;
+        echo \json_encode($message);
         \http_response_code(200);
     }
 
-    public function getDrawerAction($data) {
-        if (!$data['drawer']) return false;
-
-        $drawer = new \Application\Cards\Drawers();
-        \header('Content-Type: application/json');
-        echo \json_encode($drawer->getDrawer(urldecode($data['drawer'])));
-        \http_response_code(200);    
-    }
-
-    public function getDrawersAction() {
-        $drawers = new \Application\Cards\Drawers();
-    
-        \header('Content-Type: application/json');
-        echo \json_encode($drawers->getDrawers());
-        \http_response_code(200);
-    }
-
-    public function getAllDrawersAction() {
-        $drawers = new \Application\Cards\Drawers();
-    
-        \header('Content-Type: application/json');
-        echo \json_encode($drawers->getAllDrawers());
-        \http_response_code(200);
-    }
-
-    public function makeDrawerAction() {
-
-        $drawer = new \Application\Cards\Drawers();
-        $drawer->makeDrawer($_POST['drawer']);
-    }
-
-    public function backupAction($data) {
-
-        $drawer = new \Application\Cards\Drawers();
-        $drawer->createBackup();
-    }
-
-    public function newImageAction($data) {
+    public function createImageAction($data) {
         $drawer = new \Application\Cards\Drawers();
         $result = $drawer->saveImage();
         \header('Content-Type: application/json');
         echo \json_encode($result);
         \http_response_code(200);
     }
+
+
 }

@@ -32,16 +32,11 @@ function getDrawerData(callback) {
         {
             drawers = JSON.parse(xmlHttp.responseText);
 
-            // Create empty arrays for our drawer indeces
-            drawers.forEach( drawer => {
-                cardIndex[drawer] = [];
-            });
-
-            callback();
+            callback(drawers);
         }
     }
     
-    xmlHttp.open("GET", baseURL + "/api/getdrawers");
+    xmlHttp.open("GET", baseURL + "/api/getCabinet/id/1");
     xmlHttp.send();
 }
 
@@ -54,11 +49,11 @@ function getDrawerData(callback) {
  */
 function buildDrawer(drawer) {
     let drawerNode = document.createElement('div');
-    drawerNode.setAttribute('data-drawer', drawer);
+    drawerNode.setAttribute('data-drawer', drawer.id);
     drawerNode.classList.add('drawer');
     let drawerHeader = document.createElement("h2");
     drawerHeader.classList.add("drawer-title");
-    drawerHeader.innerHTML = `<i class="icofont-folder"></i>${drawer}`;
+    drawerHeader.innerHTML = `<i class="icofont-folder"></i>${drawer.title}`;
     let cardContainer = document.createElement("div");
     cardContainer.classList.add("drawer-container");
 
@@ -66,10 +61,10 @@ function buildDrawer(drawer) {
         e.preventDefault();
         drawerNode.classList.toggle('open');
         if (drawerNode.classList.contains('open')) {
-            drawerHeader.innerHTML = `<i class="icofont-folder-open"></i>${drawer}`;
+            drawerHeader.innerHTML = `<i class="icofont-folder-open"></i>${drawer.title}`;
             getIndex(drawer, false, buildIndex);
         } else {
-            drawerHeader.innerHTML = `<i class="icofont-folder"></i>${drawer}`;
+            drawerHeader.innerHTML = `<i class="icofont-folder"></i>${drawer.title}`;
         }
     });
     
@@ -94,15 +89,15 @@ function refreshDrawers() {
  * 
  * @param {array} drawers An array of drawer names
  */
-function buildDrawers() {
-
+function buildDrawers(drawers) {
     // First empty the drawers HTML so we can use this for both loading and
     // reloading
     let drawersNode = document.querySelector(".drawers-container");
     drawersNode.innerHTML = "";
+    for(let drawer in drawers) {
+        drawersNode.appendChild(buildDrawer(drawers[drawer]));
+        buildIndex(drawers[drawer]);
 
-    for(let drawer in cardIndex) {
-        drawersNode.appendChild(buildDrawer(drawer));
     };
 }
 
@@ -118,7 +113,7 @@ function buildDrawers() {
 function createNewDrawer(title, callback) {
     var data = new FormData();
     data.append('drawer', title);
-
+    data.append('cabinet', '1');    // TODO - change this to live
     var xhr = new XMLHttpRequest();
     xhr.open('POST', baseURL + '/api/makeDrawer/', true);
     xhr.onload = function () {
@@ -164,7 +159,7 @@ function getIndex(drawerName, forceUpdate, callback) {
 
     let drawer = document.querySelector('[data-drawer="' + drawerName + '"]');
 
-    let hasCards = !!drawer.querySelectorAll('.drawer-container > .drawer-card').length;
+    let hasCards = false;
 
     if ( (!hasCards) || (forceUpdate == true) ) {
 
@@ -200,42 +195,45 @@ function getIndex(drawerName, forceUpdate, callback) {
  * @param {array} cards An array of cards
  * @param {HTML Node} cardContainer The div that will contain cards
  */
-function buildIndex(drawerName) {
-    let drawer = document.querySelector('[data-drawer="' + drawerName + '"]');
+function buildIndex(drawerData) {
+    console.log(drawerData);
+    let drawerElem = document.querySelector('[data-drawer="' + drawerData.id + '"]');
 
-    let cards = cardIndex[drawerName];
+    let cards = drawerData['cards'];
 
-    let container = drawer.querySelector(".drawer-container");
+    let container = drawerElem.querySelector(".drawer-container");
 
     for(let card in cards) {
-        let data = cards[card];
+        let cardData = cards[card];
         let cardNode = document.createElement('div');
         cardNode.classList.add("drawer-card");
-        cardNode.innerHTML = `<i class="icofont-page"></i>${data.title}`
+        cardNode.innerHTML = `<i class="icofont-page"></i>${cardData.title}`
         cardNode.addEventListener('click', e => {
             if (document.getElementById('card-modal').classList.contains('active')) {
-                insertAtCaret(drawerName, data.id, data.title);
+                insertAtCaret(drawerData.title, cardData.id, cardData.title);
             } else {
-                getCard(drawerName, data.id, buildCard);
+                getCard(drawerData.title, cardData.id, buildCard);
             }
         })
 
         container.appendChild(cardNode);
     }
 
-    let newButtonNode = document.createElement("button");
-    newButtonNode.classList.add("button", 'positive-button');
-    newButtonNode.setAttribute('data-drawer', drawerName);
-    newButtonNode.innerHTML = '<i class="icofont-plus"></i>Add new Card';
-    newButtonNode.addEventListener('click', e => {
-        e.preventDefault();
-        cardModal.classList.add("active");
-        document.querySelector(".overlay").classList.add("active");
-        document.getElementById("card-drawer-input").value = drawerName;
-        document.getElementById("card-title-input").focus();
-    });
+    if (!drawerElem.querySelector('.add-card-button')) {
+        let newButtonNode = document.createElement("button");
+        newButtonNode.classList.add("button", 'positive-button', 'add-card-button');
+        newButtonNode.setAttribute('data-drawer', drawerData.id);
+        newButtonNode.innerHTML = '<i class="icofont-plus"></i>Add new Card';
+        newButtonNode.addEventListener('click', e => {
+            e.preventDefault();
+            cardModal.classList.add("active");
+            document.querySelector(".overlay").classList.add("active");
+            document.getElementById("card-drawer-input").value = drawerData.id;
+            document.getElementById("card-title-input").focus();
+        });
 
-    container.appendChild(newButtonNode);
+        container.appendChild(newButtonNode);
+    }
 }
 // !SECTION
 
@@ -286,7 +284,7 @@ function saveCard(callback) {
         formData.append('content', quill.root.innerHTML);
 
     let xhr = new XMLHttpRequest();
-    xhr.open('POST', baseURL + '/api/addNote/', true);
+    xhr.open('POST', baseURL + '/api/addCard/', true);
     xhr.onload = function () {
         if (this.status == 200) {
             callback();

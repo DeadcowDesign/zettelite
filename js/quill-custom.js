@@ -51,14 +51,13 @@ LinkBlot.tagName = 'a';
 Quill.register({ 'formats/linkBlot': LinkBlot });
 Quill.register("modules/imageUploader", ImageUploader);
 
-var quill = null;
 var cardIndex = {};
 var quillBuffer = '';   // This is what gets inserted into content when a card is updated
 var cardCache = 'cache';
 var isEditing = false;
 var cardModal = document.getElementById("card-modal");
 var drawerModal = document.getElementById("drawer-modal");
-quill = new Quill('#quill', {
+const quill = new Quill('#quill', {
     theme: 'snow',
     modules: {
 

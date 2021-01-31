@@ -1,38 +1,57 @@
 <div class="overlay"></div>
 <main class="zettelite">
-    <div class="drawers-heading">
-        <h2>Drawers</h2>
-    </div>
-    <div class="desk-heading">
-        <h2>Desk</h2>
-    </div>
-    <div class="drawers-column">
-        <div class="drawers-container"></div>
-        <button class="button add-drawer-button" id="add-drawer-button"><i class="icofont-plus"></i>Add a new Drawer</button>
+    <div class="zettelite-heading"><span id="cabinet-name"></span></div>
+    <div class="zettelite-container">
+        <div class="drawers-heading">
+            <h2>Drawers</h2>
+        </div>
+        <div class="desk-heading">
+            <h2>Desk</h2>
+        </div>
+        <div class="drawers-column">
+            <div class="drawers-container"></div>
+            <button class="button add-drawer-button" id="add-drawer-button"><i class="fas fa-folder-plus"></i>Add a new Drawer</button>
 
-    </div>
+        </div>
 
-    <div class="card-container">
-    <!-- CARDS ARE INSERTED HERE -->
+        <div class="card-container">
+        <!-- CARDS ARE INSERTED HERE -->
+        </div>
     </div>
 </main>
 
-<div class="modal modal-folder" id="folder-modal">
+<div class="modal modal-folder" id="text-input-modal">
     <div class="header">
-        <label for="new-folder">Give your folder an awesome title:</label>
+        <label for="new-cabinet" id="text-input-modal-title"></label>
     </div>
     <div class="modal-content">
-        <input type="text" class="modal-text-input drawer" id="new-folder">
-        <button class="button positive-button" id="folder-modal-save">Create Drawer</button>
-        <button class="button negative-button" id="folder-modal-cancel">Cancel</button>
+        <input type="text" class="modal-text-input drawer" id="new-cabinet">
+        <button class="button positive-button" id="text-input-modal-save">Save</button>
+        <button class="button negative-button" id="text-input-modal-cancel">Cancel</button>
     </div>
 </div>
+
+<div class="modal modal-warning" id="warning-modal">
+    <div class="header">
+        <h2 id="warning-modal-header" style="color: var(--negative-color);"><i class="fas fa-exclamation-triangle"></i> WARNING</h2>
+    </div>
+    <div class="modal-content">
+        <div id="warning-modal-message">
+            <p>As soon as you click the 'Delete' button below the CABINET, and all the DRAWERS and CARDS it contains <b>will be gone forever</b></p>
+            <p><b>Click 'Cancel' if you are unsure.</b></p>
+        </div>
+    </div>
+    <div class="buttons">
+        <button class="button negative-button" id="warning-modal-save">Delete</button>
+        <button class="button" id="warning-modal-cancel">Cancel</button>
+    </div>
+</div>
+
+
 <div class="modal modal-card" id="card-modal">
     <div class="modal-content">
         <input type="hidden" name="id" id="card-id-input" value="">
-        <input type="hidden" name="drawer" id="card-drawer-input" value="">
         <input type="hidden" name="parent" id="card-parent-input" value="">
-        <input type="hidden" name="children" id="card-children-input" value="">
             <div class="title">
                 <label for="card-title-input">Title: </label><input type="text" class="modal-text-input card-title" id="card-title-input" name="title">
             </div>

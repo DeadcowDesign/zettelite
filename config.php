@@ -23,6 +23,11 @@ define("ERROR_CONTROLLER", "Error");
  */
 define("CARD_FOLDER", BASE_PATH . DIRECTORY_SEPARATOR . 'cache');
 
+define("DB_HOST", "127.0.0.1");
+define("DB_USER", "root");
+define("DB_PASS", "root");
+define("DB_NAME", "zettelite");
+
 define('KB', 1024);
 define('MB', 1048576);
 define('GB', 1073741824);

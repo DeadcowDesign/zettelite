@@ -4,65 +4,63 @@ namespace Application\Cards;
 
 class Cards 
 {
-    protected $Card;
-    protected $Drawers;
-
+    protected $Database;
     /**
      * Create a card - this expects a well-formed JSON string containing our
      * card data which should include its ID, content, and title, all in string
      * format.
      */
     public function __construct() {
-        $this->Card = null;
-        $this->Drawers = new \Application\Cards\Drawers();
-    }
+        $this->Database = new \Application\Database\Items();
+        $this->Database->connect();
 
-    public function setCard($cardJSON = '') {
-        $this->Card = \json_decode($cardJSON);
-    }
-    /**
-     * Ensure that our card has all the bits and bobs it needs
-     */
-    public function verifyCard() {
-
-        if (!$this->Card) { return false; }
-        if (!is_object($this->Card)) { return false; }
-
-        if (empty($this->Card->id)) {
-            $this->Card->id = date("YmdHis");
-        }
-
-        if (
-            empty($this->Card->content) ||
-            empty($this->Card->title) ||
-            empty($this->Card->drawer) ||
-            empty($this->Card->id)
-            ) {
-                return false;
-        } 
-
-        if (
-            !is_string($this->Card->id) ||
-            !is_string($this->Card->content) ||
-            !is_string($this->Card->title) ||
-            !is_string($this->Card->drawer)
-            ) {
-                return false;
-        } 
-
-        return true;
     }
 
     /**
      * Save our card to the file system
      */
-    public function saveCard() {
+    public function createCard($card) {
+        if (!\is_array($card)) return false;
+        
+        // Check the new card keys against a list of required keys
+        $requiredKeys = ['title', 'content', 'parent'];
+        $intersect = array_intersect($requiredKeys, array_keys($card));
 
-        if ($this->verifyCard() === true) {
-    
-            $this->Drawers->addToDrawer($this->Card);
+        // If they don't intersect exactly return false because we're missing a key
+        if (!(count($requiredKeys) === count($intersect))) {
+            return false;
         }
 
-        return $this->Card->id;
+        $card['type'] = 'card';
+        
+        return $this->Database->createItem($card);
     }
+
+    /**
+     * Save our card to the file system
+     */
+    public function updateCard($data) {
+        if (!\is_array($data)) return false;
+        $requiredKeys = ['title', 'content', 'id'];
+        $intersect = array_intersect($requiredKeys, array_keys($data));
+
+        // If they don't intersect exactly return false because we're missing a key
+        if (!(count($requiredKeys) === count($intersect))) {
+            return false;
+        }
+
+        return $this->Database->updateItem($data);
+    }
+
+    public function readCard($data) {
+        
+        if (!\is_array($data)) return false;
+
+        if (!array_key_exists('id', $data)) return false;
+
+        $columns = ['id', 'title', 'content'];
+
+        return $this->Database->readItem($columns, $data);
+    }
+
 }
