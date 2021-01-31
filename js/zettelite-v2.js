@@ -258,16 +258,45 @@ class Zettelite {
      * @param {object} card The card to be built
      * @return {HTMLNode} The card link HTML
      */
-    buildDrawerCardLink(card) {
+    buildDrawerCardLink(card, isSub) {
         const self = this;
+
+        if (isSub) {
+            cardContainer.classList.add("drawer-card-sub-container");
+        }
+
+
+        let cardHeading = document.createElement('div');
+        cardHeading.classList.add("drawer-card");
         let cardNode = document.createElement('div');
-        cardNode.classList.add("drawer-card");
+        cardNode.classList.add("drawer-card-title");
         cardNode.innerHTML = `<i class="icofont-page"></i>${card.title}`;
         cardNode.addEventListener('click', (e) => {
-            self.getCard(card.id, this.buildCard);
+            self.getCard(card.id);
         })
+        cardHeading.appendChild(cardNode);
 
-        return cardNode;
+        if (card.children.length) {
+            let cardContainer = document.createElement('div');
+            cardContainer.classList.add("drawer-card-container");
+
+            let expandNode = document.createElement('div');
+            expandNode.classList.add("drawer-expand");
+            expandNode.innerHTML = '<i class="fas fa-angle-down"></i>';
+            expandNode.addEventListener('click', e => {
+                cardContainer.classList.toggle("active");
+            });
+
+            cardHeading.appendChild(expandNode);
+
+            card.children.forEach(card => {
+                cardContainer.appendChild(self.buildDrawerCardLink(card));
+            });
+
+            cardHeading.appendChild(cardContainer);
+        }
+
+        return cardHeading;
     }
 
     getCard(cardId, callback) {
@@ -276,7 +305,7 @@ class Zettelite {
         let formData = new FormData();
         formData.append('id', cardId);
         this.apiRequest('/api/readCard/', 'POST', formData).then((card) => {
-            this.buildCard(card, true);
+            self.buildCard(card, true);
         })
     }
     /**
@@ -291,6 +320,7 @@ buildCard(cardData, force) {
 
     cardData = cardData[0];
     
+    console.log(cardData);
     if (!force && !!document.querySelector(`[data-card-id="${cardData.id}"]`)) {
         return false;
     }
@@ -384,18 +414,15 @@ buildCard(cardData, force) {
     cardDate.classList.add("subtle", "status-bar-subtle");
     cardDate.innerHTML = `<div>In: ${cardData.drawer}</div>`;
     cardDate.innerHTML += `<div>Created on: ${cardData.id.substring(0,4)}/${cardData.id.substring(4,6)}/${cardData.id.substring(6,8)} ${cardData.id.substring(8,10)}:${cardData.id.substring(10,12)}</div>`;
-    cardStatus.appendChild(cardDate);*/
+    cardStatus.appendChild(cardDate);
     
  
     let childContainer = document.createElement('p');
     childContainer.innerText = 'No Children';
 
-
-    if (cardData.hasOwnProperty('children')) {
-        let linksContainer = document.createElement('div');
-        linksContainer.classList.add("child-links-container");
-
         if (cardData.children.length) {
+            let linksContainer = document.createElement('div');
+            linksContainer.classList.add("child-links-container");
 
             childContainer = document.createElement('details');
             childContainer.classList.add("card-child-links");
@@ -430,12 +457,11 @@ buildCard(cardData, force) {
             });
 
             childContainer.appendChild(linksContainer);
-        }
+        }*/
 
-    }
 
     cardElement.appendChild(cardStatus);
-    cardElement.appendChild(childContainer);
+    //cardElement.appendChild(childContainer);
 
     cardContainer.appendChild(cardElement);
 

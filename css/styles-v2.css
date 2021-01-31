@@ -275,7 +275,7 @@ MAIN PAGE STRUCTURE
 
 .drawer-title {
     margin: var(--space-narrow);
-    padding: 0.5em;
+    padding: 0.75em;
     line-height: 1;
     border-radius: 5px;
     cursor: pointer;
@@ -290,25 +290,53 @@ MAIN PAGE STRUCTURE
     padding-bottom: 1em;
 }
 .drawer-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
     margin: 0.75em;
-    padding: 0.5em;
-    line-height: 1;
-    border-radius: 5px;
-    cursor: pointer;
+
 }
 
-.drawer-card:hover {
+.drawer-card-container {
+    display: none;
+    grid-column: span 2;
+}
+
+.drawer-card-container.active {
+    display: block;
+}
+
+.drawer-card-title:hover {
     background-color: var(--hover-menu-bg);
 }
 
+
+.drawer-card-title {
+    padding: 0.75em;
+    line-height: 1;
+    border-radius: 5px;
+    cursor: pointer;
+    padding-right: 2.75em;
+}
+
+.drawer-expand {
+    text-align: right;
+    cursor: pointer;
+    padding: 1em;
+    border-radius: 5px;
+    line-height: 1;
+}
+
+.drawer-expand:hover {
+    background-color: var(--hover-menu-bg);
+}
 .add-drawer-button {
     margin: var(--space-narrow);
 }
 
-
 .card-container {
     display: grid;
-    grid-template-columns: calc(50% - 0.5em) calc(50% - 0.5em);
+    grid-template-columns: auto;
     column-gap: 1em;
     row-gap: var(--space-narrow);
     padding: 0.75em 1em;
@@ -317,7 +345,7 @@ MAIN PAGE STRUCTURE
 
 .card {
     display: grid;
-    grid-template-rows: auto 50vh auto;
+    grid-template-rows: auto auto auto;
     background: var(--content-bg);
     border-radius: 10px;
 }
